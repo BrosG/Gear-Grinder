@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GEAR GRINDER — ULTIMATE EDITION</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#05070a;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
+canvas{display:block;outline:none}
+#vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 60%,transparent 35%,#000000cc 85%,#000 100%);z-index:5}
+#speed-lines{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;z-index:4;background:radial-gradient(ellipse at 50% 50%,transparent 30%,rgba(255,255,255,.02) 60%,transparent 61%);mix-blend-mode:screen}
+#flash-overlay{position:fixed;inset:0;pointer-events:none;z-index:20;opacity:0;transition:opacity .08s}
+#shift-hint{position:absolute;top:18%;left:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-size:14px;color:#ff4d4d;text-shadow:0 0 15px #ff4d4d88;opacity:0;transition:opacity .3s;z-index:15;pointer-events:none;letter-spacing:6px;font-weight:900}
+#hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:10;display:none}
+#hud>*{pointer-events:auto}
+.hud-score{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-align:center}
+.hud-score-label{font-size:9px;letter-spacing:6px;color:#ffb84d44;text-transform:uppercase;font-family:'Orbitron'}
+.hud-score-val{font-family:'Bebas Neue',monospace;font-size:44px;background:linear-gradient(180deg,#fff,#ffb84d 50%,#ff6b3d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;transition:transform .05s;letter-spacing:2px}
+.hud-score-val.bump{transform:scale(1.15)}
+#combo-bar{font-family:'Orbitron',monospace;font-size:13px;font-weight:700;color:#4dffb8;opacity:0;transition:opacity .3s;text-shadow:0 0 12px currentColor;letter-spacing:3px}
+#combo-bar.on{opacity:1}
+.hud-dist{position:absolute;top:12px;left:14px}
+.hud-dist-val{font-family:'Orbitron',monospace;font-size:15px;color:#ffffffaa}
+.hud-dist-unit{font-size:8px;color:#ffffff33;letter-spacing:4px;font-family:'Orbitron'}
+.hud-best{position:absolute;top:12px;right:14px;text-align:right}
+.hud-best-label{font-size:8px;letter-spacing:4px;color:#ffb84d33;font-family:'Orbitron'}
+.hud-best-val{font-family:'Orbitron',monospace;font-size:13px;color:#ffb84d66}
+.hud-speed{position:absolute;bottom:18px;left:14px}
+.hud-speed-val{font-family:'Bebas Neue',monospace;font-size:56px;color:#fff;line-height:1;transition:color .2s;letter-spacing:2px}
+.hud-speed-unit{font-size:10px;letter-spacing:4px;color:#ffffff33;font-family:'Orbitron'}
+.hud-gear{position:absolute;bottom:18px;right:14px;text-align:right}
+.hud-gear-label{font-size:8px;letter-spacing:6px;color:#4db8ff44;font-family:'Orbitron'}
+.hud-gear-val{font-family:'Bebas Neue',monospace;font-size:60px;color:#4db8ff;line-height:1;display:inline-block;transition:color .2s}
+.hud-gear-val.shift-up{animation:gearUp .25s cubic-bezier(.34,1.56,.64,1)}
+.hud-gear-val.shift-down{animation:gearDown .25s cubic-bezier(.34,1.56,.64,1)}
+@keyframes gearUp{0%{transform:translateY(12px) scale(.7);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+@keyframes gearDown{0%{transform:translateY(-12px) scale(.7);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+.hud-gear-name{font-size:10px;color:#4db8ff55;letter-spacing:3px;font-family:'Orbitron'}
+.hud-incline{position:absolute;top:65px;right:14px;text-align:right}
+.hud-incline-label{font-size:8px;letter-spacing:4px;color:#ffffff22;font-family:'Orbitron'}
+.hud-incline-val{font-family:'Orbitron',monospace;font-size:20px;font-weight:700;line-height:1;transition:color .3s}
+.hud-rpm-wrap{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px}
+.hud-rpm-bar{width:22px;height:200px;background:#ffffff06;border:1px solid #ffffff0a;border-radius:11px;overflow:hidden;position:relative}
+.hud-rpm-fill{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 11px 11px;transition:height .1s ease-out}
+.hud-rpm-sweet{position:absolute;left:-2px;right:-2px;border:2px solid #4dffb844;border-radius:3px;background:#4dffb806;z-index:2}
+.hud-rpm-redline{position:absolute;left:0;right:0;top:0;height:15%;background:linear-gradient(to bottom,#ff4d4d22,transparent);border-radius:11px 11px 0 0}
+.hud-rpm-text{font-size:8px;letter-spacing:5px;color:#ffffff18;writing-mode:vertical-rl;font-family:'Orbitron'}
+.hud-energy-wrap{position:absolute;left:14px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px}
+.hud-energy-bar{width:22px;height:200px;background:#ffffff06;border:1px solid #ffffff0a;border-radius:11px;overflow:hidden;position:relative;transition:border-color .3s,box-shadow .3s}
+.hud-energy-bar.low{border-color:#ff4d4d88;box-shadow:0 0 15px #ff4d4d33;animation:eLow 1s infinite}
+@keyframes eLow{50%{box-shadow:0 0 25px #ff4d4d55}}
+.hud-energy-fill{position:absolute;bottom:0;left:0;right:0;border-radius:0 0 11px 11px;transition:height .15s ease-out;background:linear-gradient(to top,#ff4d4d,#ffb84d 40%,#4dffb8)}
+.hud-energy-text{font-size:8px;letter-spacing:5px;color:#ffffff18;writing-mode:vertical-rl;font-family:'Orbitron'}
+.hud-pedal-ring{position:absolute;bottom:85px;left:50%;transform:translateX(-50%);width:90px;height:90px;pointer-events:auto}
+.pedal-ring-svg{width:100%;height:100%}
+.pedal-ring-bg{fill:none;stroke:#ffffff06;stroke-width:3}
+.pedal-ring-progress{fill:none;stroke:#ff6b3d;stroke-width:3.5;stroke-linecap:round;transition:stroke-dashoffset .06s linear;filter:drop-shadow(0 0 8px #ff6b3d44)}
+.pedal-ring-ideal{fill:none;stroke:#4dffb833;stroke-width:6;stroke-linecap:round}
+.pedal-btn-inner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:58px;height:58px;border-radius:50%;background:radial-gradient(circle,#ff6b3d22,#ff6b3d05);border:1.5px solid #ff6b3d33;display:flex;align-items:center;justify-content:center;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:3px;color:#ff6b3d77;cursor:pointer;transition:all .06s;-webkit-tap-highlight-color:transparent}
+.pedal-btn-inner:active,.pedal-btn-inner.pressed{background:radial-gradient(circle,#ff6b3d55,#ff6b3d15);border-color:#ff6b3dcc;transform:translate(-50%,-50%) scale(.88);color:#ff6b3dcc}
+#float-text{position:absolute;left:50%;top:36%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-size:22px;font-weight:900;opacity:0;text-shadow:0 0 25px currentColor,0 0 50px currentColor;pointer-events:none;transition:opacity .2s,transform .35s;white-space:nowrap;z-index:12;letter-spacing:3px}
+#float-text.show{opacity:1;transform:translate(-50%,-60%)}
+#cliff-warn{position:absolute;left:50%;bottom:190px;transform:translateX(-50%);font-family:'Orbitron',monospace;font-size:12px;font-weight:700;color:#ff4d4d;letter-spacing:4px;opacity:0;transition:opacity .3s;white-space:nowrap;text-shadow:0 0 15px #ff0000}
+#cliff-warn.show{opacity:1;animation:blink .35s infinite}
+@keyframes blink{50%{opacity:.15}}
+#powerup-status{position:absolute;top:80px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .3s;background:#ffffff08;padding:4px 14px;border-radius:20px;border:1px solid #ffffff11}
+#powerup-status.show{opacity:1}
+.pu-icon{font-size:20px}.pu-label{font-family:'Orbitron',monospace;font-size:11px;letter-spacing:2px}.pu-timer{font-family:'Bebas Neue';font-size:18px}
+#zone-banner{position:absolute;left:50%;top:26%;transform:translate(-50%,-50%);text-align:center;opacity:0;pointer-events:none;transition:opacity .6s}
+#zone-banner.show{opacity:1}
+.zone-name{font-family:'Bebas Neue',monospace;font-size:32px;letter-spacing:8px;text-shadow:0 0 30px currentColor}
+.zone-sub{font-size:10px;letter-spacing:10px;margin-top:2px;opacity:.3;font-family:'Orbitron'}
+#start-screen{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#06080e;overflow:hidden}
+.bg-grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(#ffffff05 1px,transparent 1px),linear-gradient(90deg,#ffffff05 1px,transparent 1px);background-size:40px 40px;animation:gridScroll 4s linear infinite}
+@keyframes gridScroll{from{background-position:0 0}to{background-position:0 40px}}
+.bg-glow{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,#ff6b3d11,transparent 60%);pointer-events:none;animation:glowP 3s ease-in-out infinite alternate}
+@keyframes glowP{from{transform:translate(-50%,-50%) scale(1);opacity:.6}to{transform:translate(-50%,-50%) scale(1.2);opacity:1}}
+#start-content{z-index:1;text-align:center;padding:30px}
+#start-screen h1{font-family:'Bebas Neue',monospace;font-size:72px;letter-spacing:12px;background:linear-gradient(180deg,#fff,#ffb84d 40%,#ff6b3d 70%,#ff4d8b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.start-edition{font-family:'Orbitron';font-size:11px;letter-spacing:12px;color:#ff6b3d66;margin-bottom:28px}
+.start-controls{text-align:left;margin:0 auto 28px;max-width:440px;color:#ffffff66;font-size:12px;line-height:1.8;display:grid;grid-template-columns:auto 1fr;gap:6px 16px;background:#ffffff04;padding:18px 22px;border-radius:12px;border:1px solid #ffffff08}
+.start-controls .key{color:#ffb84d;font-weight:700;font-family:'Orbitron';font-size:10px;text-align:right;white-space:nowrap}
+.start-controls .sep{grid-column:1/-1;border-top:1px solid #ffffff08;margin:4px 0}
+.start-tip{grid-column:1/-1;text-align:center;color:#4dffb888;font-size:10px;font-family:'Orbitron';letter-spacing:2px;padding-top:6px}
+#start-btn{padding:14px 60px;border:1.5px solid #ff6b3d55;border-radius:50px;background:#ff6b3d0a;color:#ff6b3d;font-family:'Bebas Neue',monospace;font-size:22px;letter-spacing:8px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+#start-btn:hover{background:#ff6b3d1a;border-color:#ff6b3d99;box-shadow:0 0 40px #ff6b3d22}
+#start-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,#ff6b3d22,transparent);transform:translateX(-100%);animation:btnShine 2.5s infinite}
+@keyframes btnShine{0%,70%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+#go-screen{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;background:#06080eee;backdrop-filter:blur(16px)}
+#go-screen.show{display:flex}
+#go-screen h2{font-family:'Bebas Neue',monospace;font-size:40px;letter-spacing:8px;color:#ff4d4d;margin-bottom:4px;text-shadow:0 0 30px #ff4d4d44}
+.go-grade-wrap{margin:8px 0 16px}
+.go-grade-label{font-size:9px;letter-spacing:5px;color:#ffffff33;text-align:center;font-family:'Orbitron'}
+.go-grade-val{font-family:'Bebas Neue',monospace;font-size:90px;line-height:1;text-shadow:0 0 40px currentColor;transform:scale(0);transition:transform .5s cubic-bezier(.175,.885,.32,1.275)}
+.go-grade-val.pop{transform:scale(1)}
+.go-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;margin-bottom:14px}
+.go-stat{font-family:'Orbitron',monospace;font-size:10px;color:#ffffff33;letter-spacing:2px;opacity:0;transform:translateY(8px);transition:all .3s}
+.go-stat.show{opacity:1;transform:translateY(0)}
+.go-stat strong{color:#ffffffcc;font-size:16px;margin-left:6px;font-family:'Bebas Neue'}
+.go-score{font-family:'Bebas Neue',monospace;font-size:48px;letter-spacing:3px;background:linear-gradient(180deg,#fff,#ffb84d,#ff6b3d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:8px 0}
+.go-hs{color:#4dffb888;font-family:'Orbitron',monospace;font-size:11px;margin-bottom:16px;letter-spacing:2px}
+.go-new{color:#4dffb8;font-family:'Orbitron',monospace;font-size:13px;letter-spacing:6px;animation:flash .5s infinite alternate;margin-bottom:4px}
+@keyframes flash{from{opacity:.3}to{opacity:1;text-shadow:0 0 20px #4dffb866}}
+.go-btns{display:flex;gap:8px}.go-btn{padding:10px 26px;border-radius:50px;font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all .3s;border:1.5px solid}
+#retry-btn{background:#ff6b3d0a;border-color:#ff6b3d55;color:#ff6b3d}#retry-btn:hover{background:#ff6b3d22}
+#share-btn{background:#4db8ff0a;border-color:#4db8ff55;color:#4db8ff}#share-btn:hover{background:#4db8ff22}
+#toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#4dffb80e;border:1px solid #4dffb833;color:#4dffb8;padding:6px 20px;border-radius:30px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;opacity:0;transition:opacity .4s;z-index:200;pointer-events:none}
+#toast.show{opacity:1}
+@media(max-width:600px){.hud-score-val{font-size:32px}.hud-speed-val{font-size:40px}.hud-gear-val{font-size:44px}#start-screen h1{font-size:42px;letter-spacing:6px}.hud-rpm-bar,.hud-energy-bar{height:150px;width:18px}.go-score{font-size:36px}.go-grade-val{font-size:70px}}
+</style>
+</head>
+<body>
+<div id="vignette"></div><div id="speed-lines"></div><div id="flash-overlay"></div><div id="shift-hint"></div>
+<div id="start-screen"><div class="bg-grid"></div><div class="bg-glow"></div><div id="start-content">
+<h1>GEAR GRINDER</h1><div class="start-edition">ULTIMATE EDITION</div>
+<div class="start-controls">
+<span class="key">SPACE / TAP</span><span>Pedal — rhythm is everything</span>
+<span class="key">↑ ↓ / SCROLL</span><span>Shift through 12 gears</span>
+<span class="key">← → / SWIPE</span><span>Dodge obstacles & grab powerups</span>
+<div class="sep"></div>
+<span class="key">⚡🔥✨🪶</span><span>Energy · Speed · Score · Gravity</span>
+<div class="start-tip">SHIFT UP IN THE GREEN ZONE → PERFECT SHIFT BONUS</div>
+</div><button id="start-btn">RIDE</button></div></div>
+
+<div id="go-screen"><div class="go-new" id="go-new" style="display:none">★ NEW RECORD ★</div>
+<h2>WIPEOUT</h2><div class="go-grade-wrap"><div class="go-grade-label">PERFORMANCE</div><div class="go-grade-val" id="go-grade">A</div></div>
+<div class="go-grid">
+<div class="go-stat">DISTANCE<strong id="go-dist">0</strong></div><div class="go-stat">MAX SPEED<strong id="go-maxspd">0</strong></div>
+<div class="go-stat">PERFECTS<strong id="go-perfect">0</strong></div><div class="go-stat">CLIFFS<strong id="go-cliffs">0</strong></div>
+<div class="go-stat">TOP GEAR<strong id="go-topgear">1</strong></div><div class="go-stat">BEST COMBO<strong id="go-combo">0</strong></div>
+</div><div class="go-score" id="go-score">0</div><div class="go-hs" id="go-hs">HIGH SCORE: 0</div>
+<div class="go-btns"><button class="go-btn" id="retry-btn">RETRY</button><button class="go-btn" id="share-btn">SHARE</button></div></div>
+
+<div id="hud">
+<div class="hud-score"><div class="hud-score-label">SCORE</div><div class="hud-score-val" id="h-score">0</div><div id="combo-bar">COMBO ×1</div></div>
+<div id="powerup-status"><span class="pu-icon" id="pu-icon"></span><span class="pu-label" id="pu-label"></span><span class="pu-timer" id="pu-timer"></span></div>
+<div class="hud-dist"><div class="hud-dist-val" id="h-dist">0</div><div class="hud-dist-unit">METERS</div></div>
+<div class="hud-best"><div class="hud-best-label">BEST</div><div class="hud-best-val" id="h-best">0</div></div>
+<div class="hud-speed"><div class="hud-speed-val" id="h-speed">0</div><div class="hud-speed-unit">KM/H</div></div>
+<div class="hud-gear"><div class="hud-gear-label">GEAR</div><div class="hud-gear-val" id="h-gear">1</div><div class="hud-gear-name" id="h-gname">EASY</div></div>
+<div class="hud-incline"><div class="hud-incline-label">GRADIENT</div><div class="hud-incline-val" id="h-incline">0%</div></div>
+<div class="hud-rpm-wrap"><div class="hud-rpm-text">R P M</div><div class="hud-rpm-bar"><div class="hud-rpm-redline"></div><div class="hud-rpm-fill" id="rpm-fill"></div><div class="hud-rpm-sweet" id="rpm-sweet"></div></div></div>
+<div class="hud-energy-wrap"><div class="hud-energy-bar" id="energy-bar-el"><div class="hud-energy-fill" id="energy-fill"></div></div><div class="hud-energy-text">E N R G Y</div></div>
+<div class="hud-pedal-ring"><svg class="pedal-ring-svg" viewBox="0 0 100 100"><circle class="pedal-ring-bg" cx="50" cy="50" r="44"/><circle class="pedal-ring-ideal" id="pedal-ideal-arc" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="220" transform="rotate(-90 50 50)"/><circle class="pedal-ring-progress" id="pedal-progress" cx="50" cy="50" r="44" stroke-dasharray="276.5" stroke-dashoffset="276.5" transform="rotate(-90 50 50)"/></svg><div class="pedal-btn-inner" id="pedal-btn">PEDAL</div></div>
+<div id="float-text"></div><div id="cliff-warn">⚠ CLIFF AHEAD ⚠</div>
+<div id="zone-banner"><div class="zone-name" id="z-name"></div><div class="zone-sub" id="z-sub"></div></div>
+</div>
+<div id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+"use strict";
+// ═══════════════ CONSTANTS ═══════════════
+const LANE_W=2.2,LANES=[-LANE_W,0,LANE_W],RW=8,RSL=4,RCOUNT=72;
+const POWERUPS=[
+  {type:'ENERGY',color:0x4dffb8,icon:'⚡',dur:0,msg:'⚡ ENERGY BOOST'},
+  {type:'SPEED',color:0xff6b3d,icon:'🔥',dur:6,msg:'🔥 SPEED BURST'},
+  {type:'SCORE',color:0xffcc00,icon:'✨',dur:8,msg:'✨ DOUBLE POINTS'},
+  {type:'GRAVITY',color:0x4db8ff,icon:'🪶',dur:7,msg:'🪶 FEATHERWEIGHT'},
+];
+const GEARS=[null,
+  // sMin/sMax = RPM sweet spot, optSpd = speed range where gear is efficient (wider = more forgiving)
+  // eCost = base energy per pedal, rpmGain = how much RPM per pedal
+  {name:'EASY',      ratio:.40,sMin:.12,sMax:.68,bpm:200,top:16, eCost:.004,rpmGain:.16,optSpd:[0,18]},
+  {name:'LIGHT',     ratio:.52,sMin:.15,sMax:.62,bpm:185,top:24, eCost:.006,rpmGain:.13,optSpd:[5,26]},
+  {name:'CRUISE',    ratio:.65,sMin:.18,sMax:.58,bpm:170,top:32, eCost:.009,rpmGain:.11,optSpd:[12,35]},
+  {name:'TEMPO',     ratio:.80,sMin:.20,sMax:.55,bpm:155,top:40, eCost:.012,rpmGain:.095,optSpd:[20,44]},
+  {name:'STEADY',    ratio:.95,sMin:.22,sMax:.52,bpm:140,top:48, eCost:.016,rpmGain:.085,optSpd:[28,52]},
+  {name:'DRIVE',     ratio:1.12,sMin:.24,sMax:.50,bpm:125,top:56, eCost:.020,rpmGain:.075,optSpd:[36,60]},
+  {name:'PUSH',      ratio:1.30,sMin:.25,sMax:.48,bpm:110,top:65, eCost:.026,rpmGain:.065,optSpd:[44,68]},
+  {name:'POWER',     ratio:1.50,sMin:.26,sMax:.46,bpm:95, top:74, eCost:.032,rpmGain:.058,optSpd:[52,78]},
+  {name:'TURBO',     ratio:1.72,sMin:.27,sMax:.44,bpm:82, top:84, eCost:.040,rpmGain:.050,optSpd:[60,88]},
+  {name:'OVERDRIVE', ratio:1.95,sMin:.28,sMax:.42,bpm:72, top:94, eCost:.048,rpmGain:.044,optSpd:[70,98]},
+  {name:'HYPER',     ratio:2.20,sMin:.29,sMax:.40,bpm:62, top:105,eCost:.058,rpmGain:.038,optSpd:[80,108]},
+  {name:'WARP',      ratio:2.50,sMin:.30,sMax:.38,bpm:54, top:118,eCost:.070,rpmGain:.034,optSpd:[90,120]},
+];
+const ZONES=[
+  {dist:0,name:'CITY STREETS',col:0x4db8ff,fog:0x0a0e1e,gnd:0x12121e,road:0x22223a,line:0x3a3a5a},
+  {dist:500,name:'COASTAL ROAD',col:0x4dffb8,fog:0x0a1a14,gnd:0x0e1e16,road:0x1a2e24,line:0x3a6a5a},
+  {dist:1200,name:'FOREST TRAIL',col:0x88cc44,fog:0x0e1a0a,gnd:0x141e0e,road:0x222e1a,line:0x5a7a3a},
+  {dist:2200,name:'MOUNTAIN PASS',col:0xffb84d,fog:0x1a140a,gnd:0x1e1a0e,road:0x2e2a1a,line:0x8a7a4a},
+  {dist:3500,name:'DESERT FURY',col:0xff6b3d,fog:0x1a100a,gnd:0x1e140e,road:0x2e201a,line:0x8a5a3a},
+  {dist:5000,name:'NEON CANYON',col:0xff4d8b,fog:0x1a0a14,gnd:0x1e0e16,road:0x2e1a24,line:0x8a3a5a},
+  {dist:7000,name:'THE VOID',col:0xaa44ff,fog:0x120a1a,gnd:0x160e1e,road:0x221a2e,line:0x6a3a8a},
+];
+
+// ═══════════════ STATE ═══════════════
+const S={score:0,distance:0,speed:0,maxSpeed:0,gear:1,maxGear:12,topGearUsed:1,rpm:0,combo:0,bestCombo:0,energy:1,alive:true,started:false,lastPedal:0,pedalInterval:0,pedalCount:0,difficulty:1,zone:0,shake:0,frame:0,incline:0,targetIncline:0,nextInclineChange:500,lane:1,laneX:0,activePowerup:null,powerupTimer:0,invulnerable:0,stats:{perfects:0,cliffs:0,powerups:0}};
+let HS=parseInt(localStorage.getItem('gg_hs3')||'0');
+
+// ═══════════════ THREE.JS ═══════════════
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x0a0e1e,.007);
+const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,400);
+camera.position.set(0,3.5,8);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3;
+renderer.setClearColor(0x0a0e1e);
+document.body.prepend(renderer.domElement);
+
+const ambientL=new THREE.AmbientLight(0x556688,.8);scene.add(ambientL);
+const sun=new THREE.DirectionalLight(0xfff0dd,1.6);
+sun.position.set(8,18,5);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.near=.5;sun.shadow.camera.far=70;
+sun.shadow.camera.left=-22;sun.shadow.camera.right=22;sun.shadow.camera.top=22;sun.shadow.camera.bottom=-22;
+scene.add(sun);
+scene.add(new THREE.DirectionalLight(0x88aaff,.4).translateX(-6).translateY(8));
+const pLight=new THREE.PointLight(0xff6b3d,.5,35);pLight.position.set(0,3,0);scene.add(pLight);
+scene.add(new THREE.HemisphereLight(0x5577aa,0x223344,.5));
+
+// ═══════════════ ROAD ═══════════════
+const roadSegs=[],roadGrp=new THREE.Group();scene.add(roadGrp);
+const roadMat=new THREE.MeshStandardMaterial({color:0x22223a,roughness:.85,metalness:.05});
+const gndMat=new THREE.MeshStandardMaterial({color:0x12121e,roughness:1});
+
+function mkRoadSeg(z){
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(RW,RSL),roadMat.clone());
+  mesh.rotation.x=-Math.PI/2;mesh.position.set(0,.01,z);mesh.receiveShadow=true;roadGrp.add(mesh);
+  mesh.userData={lines:[]};
+  [-RW/2,RW/2].forEach(x=>{
+    const l=new THREE.Mesh(new THREE.PlaneGeometry(.12,RSL),new THREE.MeshBasicMaterial({color:0x3a3a5a}));
+    l.rotation.x=-Math.PI/2;l.position.set(x,.015,z);roadGrp.add(l);mesh.userData.lines.push(l);
+  });
+  [-LANE_W,LANE_W].forEach(x=>{
+    if(Math.floor(-z/RSL)%2===0){
+      const d=new THREE.Mesh(new THREE.PlaneGeometry(.06,RSL*.45),new THREE.MeshBasicMaterial({color:0xffffff22}));
+      d.rotation.x=-Math.PI/2;d.position.set(x,.015,z);roadGrp.add(d);mesh.userData.lines.push(d);
+    }
+  });
+  return mesh;
+}
+for(let i=0;i<RCOUNT;i++)roadSegs.push(mkRoadSeg(-i*RSL));
+const gnd=new THREE.Mesh(new THREE.PlaneGeometry(600,800),gndMat);
+gnd.rotation.x=-Math.PI/2;gnd.position.set(0,-.05,0);gnd.receiveShadow=true;scene.add(gnd);
+
+// ═══════════════ BICYCLE ═══════════════
+const bikeGrp=new THREE.Group();scene.add(bikeGrp);
+const mF=new THREE.MeshStandardMaterial({color:0xdd2222,metalness:.65,roughness:.2});
+const mF2=new THREE.MeshStandardMaterial({color:0xbb1111,metalness:.65,roughness:.2});
+const mCr=new THREE.MeshStandardMaterial({color:0xdddddd,metalness:.9,roughness:.1});
+const mDk=new THREE.MeshStandardMaterial({color:0x222222,roughness:.8});
+const mTr=new THREE.MeshStandardMaterial({color:0x111111,roughness:.85});
+const mRm=new THREE.MeshStandardMaterial({color:0xbbbbbb,metalness:.8,roughness:.15});
+const mSp=new THREE.MeshBasicMaterial({color:0x999999});
+const mGd=new THREE.MeshStandardMaterial({color:0xccaa33,metalness:.7,roughness:.3});
+
+function mkT(a,b,r=.025,mat=mF){
+  const d=new THREE.Vector3().subVectors(b,a),len=d.length();
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,12),mat);
+  m.position.copy(a).add(d.clone().multiplyScalar(.5));
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+  m.castShadow=true;return m;
+}
+
+function mkWheel(zP){
+  const wg=new THREE.Group();
+  const tire=new THREE.Mesh(new THREE.TorusGeometry(.34,.055,14,40),mTr);
+  tire.rotation.y=Math.PI/2;tire.castShadow=true;wg.add(tire);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(.295,.018,10,40),mRm);
+  rim.rotation.y=Math.PI/2;wg.add(rim);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.1,12),mCr);
+  hub.rotation.z=Math.PI/2;wg.add(hub);
+  for(let i=0;i<24;i++){
+    const a=(i/24)*Math.PI*2,inner=.05,outer=.28,mid=(inner+outer)/2;
+    const sp=new THREE.Mesh(new THREE.CylinderGeometry(.002,.002,outer-inner,3),mSp);
+    sp.position.set(0,Math.cos(a)*mid,Math.sin(a)*mid);sp.rotation.x=a;wg.add(sp);
+  }
+  wg.position.set(0,.34,zP);return wg;
+}
+const frontW=mkWheel(-1),rearW=mkWheel(1);bikeGrp.add(frontW,rearW);
+
+// Frame points
+const P={ht:new THREE.Vector3(0,1.06,-.70),hb:new THREE.Vector3(0,.65,-.82),
+  seat:new THREE.Vector3(0,1.12,.30),bb:new THREE.Vector3(0,.42,.12),
+  rear:new THREE.Vector3(0,.34,1),fork:new THREE.Vector3(0,.34,-1),
+  sTop:new THREE.Vector3(0,1.22,.32)};
+
+bikeGrp.add(mkT(P.seat,P.ht,.022));bikeGrp.add(mkT(P.ht,P.bb,.025));bikeGrp.add(mkT(P.seat,P.bb,.028));
+bikeGrp.add(mkT(P.seat,P.sTop,.014,mCr));bikeGrp.add(mkT(P.ht,P.hb,.02));
+const csO=.055;
+[csO,-csO].forEach(x=>{
+  bikeGrp.add(mkT(P.seat.clone().add(new THREE.Vector3(x,-.12,0)),P.rear.clone().add(new THREE.Vector3(x,0,0)),.012,mF2));
+  bikeGrp.add(mkT(P.bb.clone().add(new THREE.Vector3(x,-.04,0)),P.rear.clone().add(new THREE.Vector3(x,0,0)),.014,mF2));
+});
+const fO=.05;
+[fO,-fO].forEach(x=>{
+  bikeGrp.add(mkT(P.hb.clone().add(new THREE.Vector3(x,.05,0)),P.fork.clone().add(new THREE.Vector3(x,0,0)),.016,mCr));
+});
+
+// Handlebar (drop bar shape)
+const hbar=new THREE.Mesh(new THREE.TorusGeometry(.15,.008,8,20,Math.PI),mCr);
+hbar.position.set(0,1.12,-.80);hbar.rotation.x=Math.PI/2;hbar.rotation.z=Math.PI;bikeGrp.add(hbar);
+[-.15,.15].forEach(x=>{
+  const g=new THREE.Mesh(new THREE.CylinderGeometry(.014,.014,.08,10),mDk);
+  g.position.set(x,1.12,-.95);g.rotation.z=Math.PI/2;bikeGrp.add(g);
+});
+
+// Seat
+const seatM=new THREE.Mesh(new THREE.BoxGeometry(.12,.03,.26),mDk);
+seatM.position.copy(P.sTop).add(new THREE.Vector3(0,.015,0));bikeGrp.add(seatM);
+
+// Chainring + Crank
+const chainring=new THREE.Mesh(new THREE.TorusGeometry(.10,.012,8,30),mGd);
+chainring.position.copy(P.bb);chainring.rotation.y=Math.PI/2;bikeGrp.add(chainring);
+
+const crankGrp=new THREE.Group();crankGrp.position.copy(P.bb);
+const cAG=new THREE.BoxGeometry(.02,.17,.012);
+const cA1=new THREE.Mesh(cAG,mCr);cA1.position.set(.06,.085,0);crankGrp.add(cA1);
+const cA2=new THREE.Mesh(cAG,mCr);cA2.position.set(-.06,-.085,0);crankGrp.add(cA2);
+const pG=new THREE.BoxGeometry(.09,.015,.05);
+crankGrp.add(new THREE.Mesh(pG,mDk).translateX(.06).translateY(.17));
+crankGrp.add(new THREE.Mesh(pG,mDk).translateX(-.06).translateY(-.17));
+bikeGrp.add(crankGrp);
+
+// Sprocket + chain
+const sprocket=new THREE.Mesh(new THREE.TorusGeometry(.05,.008,6,20),mCr);
+sprocket.position.copy(P.rear);sprocket.rotation.y=Math.PI/2;bikeGrp.add(sprocket);
+const mChn=new THREE.MeshStandardMaterial({color:0x444444,metalness:.6,roughness:.5});
+bikeGrp.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([P.bb.clone().add(new THREE.Vector3(0,-.07,0)),P.rear.clone().add(new THREE.Vector3(0,-.03,0))]),10,.006,6,false),mChn));
+bikeGrp.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([P.rear.clone().add(new THREE.Vector3(0,.03,0)),P.bb.clone().add(new THREE.Vector3(0,.07,0))]),10,.006,6,false),mChn));
+
+// Bottle + headlight + taillight
+const bottle=new THREE.Mesh(new THREE.CylinderGeometry(.032,.035,.20,10),new THREE.MeshStandardMaterial({color:0x2288ff,roughness:.5}));
+bottle.position.set(0,.72,-.18);bottle.rotation.x=-.15;bikeGrp.add(bottle);
+const headL=new THREE.SpotLight(0xffffee,2.5,40,.5,.6,1.2);
+headL.position.set(0,.9,-.85);headL.target.position.set(0,0,-12);bikeGrp.add(headL);bikeGrp.add(headL.target);
+bikeGrp.add(new THREE.Mesh(new THREE.SphereGeometry(.03,8,8),new THREE.MeshBasicMaterial({color:0xffffcc})).translateY(.9).translateZ(-.88));
+const tailBulb=new THREE.Mesh(new THREE.BoxGeometry(.04,.03,.015),new THREE.MeshBasicMaterial({color:0xff2200}));
+tailBulb.position.set(0,1.15,.42);bikeGrp.add(tailBulb);
+bikeGrp.add(new THREE.PointLight(0xff2200,.4,4).translateY(1.1).translateZ(.45));
+
+// ═══════════════ RIDER ═══════════════
+const riderGrp=new THREE.Group();bikeGrp.add(riderGrp);
+const mJersey=new THREE.MeshStandardMaterial({color:0x1144cc,roughness:.65,metalness:.05});
+const mJersey2=new THREE.MeshStandardMaterial({color:0x0033aa,roughness:.65,metalness:.05});
+const mShorts=new THREE.MeshStandardMaterial({color:0x0a0a22,roughness:.75});
+const mSkin=new THREE.MeshStandardMaterial({color:0xe8b88a,roughness:.85});
+const mHelm=new THREE.MeshStandardMaterial({color:0xee2222,metalness:.35,roughness:.35});
+const mHelm2=new THREE.MeshStandardMaterial({color:0xcc1111,metalness:.35,roughness:.35});
+const mShoe=new THREE.MeshStandardMaterial({color:0x1a1a1a,roughness:.75,metalness:.1});
+const mGlass=new THREE.MeshStandardMaterial({color:0x050505,metalness:.95,roughness:.05});
+const mGlove=new THREE.MeshStandardMaterial({color:0x111111,roughness:.65,metalness:.1});
+const mSock=new THREE.MeshStandardMaterial({color:0xf0f0f0,roughness:.85});
+
+// ── HIPS (pivot on seat, everything branches from here) ──
+const hipGrp=new THREE.Group();
+hipGrp.position.set(0,1.18,.30); // On the saddle
+riderGrp.add(hipGrp);
+// Pelvis shape
+const pelvis=new THREE.Mesh(new THREE.SphereGeometry(.10,12,10),mShorts);
+pelvis.scale.set(1.2,.7,1);pelvis.castShadow=true;hipGrp.add(pelvis);
+
+// ── SPINE / TORSO (leans forward from hips) ──
+const spineGrp=new THREE.Group();
+spineGrp.position.set(0,.06,0);
+hipGrp.add(spineGrp);
+
+// Lower back
+const lowerBack=new THREE.Mesh(new THREE.CylinderGeometry(.09,.11,.16,12),mJersey);
+lowerBack.position.y=.08;lowerBack.castShadow=true;spineGrp.add(lowerBack);
+// Main torso (chest) — wider at top for shoulders
+const chest=new THREE.Mesh(new THREE.CylinderGeometry(.12,.10,.28,14),mJersey);
+chest.position.y=.30;chest.castShadow=true;spineGrp.add(chest);
+// Jersey details
+const jerseyStripe=new THREE.Mesh(new THREE.CylinderGeometry(.125,.105,.04,14),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.7}));
+jerseyStripe.position.y=.34;spineGrp.add(jerseyStripe);
+const jerseyStripe2=new THREE.Mesh(new THREE.CylinderGeometry(.123,.103,.025,14),new THREE.MeshStandardMaterial({color:0xff3333,roughness:.7}));
+jerseyStripe2.position.y=.37;spineGrp.add(jerseyStripe2);
+// Back pocket bumps (pro detail)
+for(let i=-1;i<=1;i++){
+  const pkt=new THREE.Mesh(new THREE.BoxGeometry(.06,.04,.03),mJersey2);
+  pkt.position.set(i*.05,.17,-.10);spineGrp.add(pkt);
+}
+
+// ── SHOULDERS (separate spheres that bridge torso→arms) ──
+const shoulderY=.44,shoulderX=.13;
+[-1,1].forEach(s=>{
+  const sh=new THREE.Mesh(new THREE.SphereGeometry(.05,10,10),mJersey);
+  sh.scale.set(1.1,.8,1);sh.position.set(s*shoulderX,shoulderY,0);sh.castShadow=true;spineGrp.add(sh);
+});
+
+// ── NECK + HEAD ──
+const neckGrp=new THREE.Group();neckGrp.position.set(0,.48,.02);spineGrp.add(neckGrp);
+const neckM=new THREE.Mesh(new THREE.CylinderGeometry(.028,.032,.06,8),mSkin);neckGrp.add(neckM);
+
+const headGrp=new THREE.Group();headGrp.position.set(0,.06,0);neckGrp.add(headGrp);
+// Skull (slightly elongated)
+const skull=new THREE.Mesh(new THREE.SphereGeometry(.082,16,14),mSkin);
+skull.scale.set(.95,1.05,.90);skull.castShadow=true;headGrp.add(skull);
+// Face features - chin
+const chin=new THREE.Mesh(new THREE.SphereGeometry(.03,8,8),mSkin);
+chin.position.set(0,-.06,.05);chin.scale.set(1,.6,1);headGrp.add(chin);
+// Helmet - full aero
+const helmShell=new THREE.Mesh(new THREE.SphereGeometry(.098,16,14,0,Math.PI*2,0,Math.PI*.62),mHelm);
+helmShell.position.y=.01;helmShell.castShadow=true;headGrp.add(helmShell);
+// Helmet vents
+for(let i=-1;i<=1;i++){
+  const vent=new THREE.Mesh(new THREE.BoxGeometry(.012,.004,.07),mDk);
+  vent.position.set(i*.03,.085,-.015);headGrp.add(vent);
+}
+// Helmet tail (aero extension)
+const helmTail=new THREE.Mesh(new THREE.CylinderGeometry(.02,.006,.14,6),mHelm2);
+helmTail.rotation.x=.7;helmTail.position.set(0,.04,-.11);headGrp.add(helmTail);
+// Wrap-around glasses
+const glassGrp=new THREE.Group();glassGrp.position.set(0,-.01,.075);headGrp.add(glassGrp);
+const lensL=new THREE.Mesh(new THREE.BoxGeometry(.05,.024,.012),mGlass);lensL.position.x=.028;glassGrp.add(lensL);
+const lensR=lensL.clone();lensR.position.x=-.028;glassGrp.add(lensR);
+glassGrp.add(new THREE.Mesh(new THREE.BoxGeometry(.015,.01,.012),mGlass));
+
+// ── ARMS (attached to spine at shoulders, reaching FORWARD to handlebars) ──
+function mkArm(side){
+  const shoulderPivot=new THREE.Group();
+  shoulderPivot.position.set(side*shoulderX,shoulderY,0);
+
+  // Upper arm (in jersey sleeve)
+  const sleeveGrp=new THREE.Group();
+  const upperLen=.22;
+  const upper=new THREE.Mesh(new THREE.CylinderGeometry(.038,.032,upperLen,10),mJersey);
+  upper.position.y=-upperLen/2;upper.castShadow=true;sleeveGrp.add(upper);
+  // Sleeve hem
+  const hem=new THREE.Mesh(new THREE.CylinderGeometry(.034,.036,.02,10),mJersey2);
+  hem.position.y=-upperLen+.01;sleeveGrp.add(hem);
+  shoulderPivot.add(sleeveGrp);
+
+  // Elbow pivot
+  const elbowPivot=new THREE.Group();
+  elbowPivot.position.set(0,-upperLen,0);
+  // Elbow joint (visible)
+  elbowPivot.add(new THREE.Mesh(new THREE.SphereGeometry(.024,8,8),mSkin));
+  // Forearm
+  const foreLen=.20;
+  const forearm=new THREE.Mesh(new THREE.CylinderGeometry(.028,.020,foreLen,10),mSkin);
+  forearm.position.y=-foreLen/2;forearm.castShadow=true;elbowPivot.add(forearm);
+
+  // Wrist + glove
+  const wristGrp=new THREE.Group();wristGrp.position.set(0,-foreLen,0);
+  // Cycling glove
+  const glove=new THREE.Mesh(new THREE.BoxGeometry(.035,.025,.045),mGlove);
+  glove.position.set(0,-.01,.005);wristGrp.add(glove);
+  // Fingers wrapped around bar
+  const grip=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.04,6),mGlove);
+  grip.rotation.z=Math.PI/2;grip.position.set(0,-.025,.005);wristGrp.add(grip);
+
+  elbowPivot.add(wristGrp);
+  shoulderPivot.add(elbowPivot);
+  shoulderPivot.userData={elbow:elbowPivot,wrist:wristGrp,side};
+  return shoulderPivot;
+}
+const lArm=mkArm(1),rArm=mkArm(-1);
+spineGrp.add(lArm,rArm);
+
+// ── LEGS (attached at HIPS, reaching down to pedals) ──
+function mkLeg(side){
+  const hipPivot=new THREE.Group();
+  hipPivot.position.set(side*.07,-.04,.01);
+
+  // Thigh in cycling shorts
+  const thighLen=.30;
+  const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.060,.048,thighLen,12),mShorts);
+  thigh.position.y=-thighLen/2;thigh.castShadow=true;hipPivot.add(thigh);
+  // Shorts hem with silicone grip (pro detail)
+  const grip=new THREE.Mesh(new THREE.CylinderGeometry(.049,.051,.015,12),new THREE.MeshStandardMaterial({color:0x222244,roughness:.6}));
+  grip.position.y=-thighLen+.01;hipPivot.add(grip);
+
+  // Knee pivot
+  const kneePivot=new THREE.Group();
+  kneePivot.position.set(0,-thighLen,0);
+  // Kneecap
+  const kneecap=new THREE.Mesh(new THREE.SphereGeometry(.032,8,8),mSkin);
+  kneecap.position.z=.01;kneePivot.add(kneecap);
+  // Lower leg (skin)
+  const shinLen=.26;
+  const shin=new THREE.Mesh(new THREE.CylinderGeometry(.038,.030,shinLen,12),mSkin);
+  shin.position.y=-shinLen/2;shin.castShadow=true;kneePivot.add(shin);
+  // Calf muscle (bulge on back)
+  const calf=new THREE.Mesh(new THREE.SphereGeometry(.032,8,8),mSkin);
+  calf.scale.set(.8,1.5,.8);calf.position.set(0,-shinLen*.3,-.02);kneePivot.add(calf);
+  // Sock
+  const sock=new THREE.Mesh(new THREE.CylinderGeometry(.032,.030,.10,10),mSock);
+  sock.position.y=-shinLen+.03;kneePivot.add(sock);
+  // Cycling shoe
+  const shoeGrp=new THREE.Group();shoeGrp.position.set(0,-shinLen-.01,0);
+  const shoeBody=new THREE.Mesh(new THREE.BoxGeometry(.05,.028,.12),mShoe);
+  shoeBody.position.set(0,-.012,.015);shoeGrp.add(shoeBody);
+  // Sole (stiff carbon-look)
+  const sole=new THREE.Mesh(new THREE.BoxGeometry(.052,.007,.12),new THREE.MeshStandardMaterial({color:0xcc1111,roughness:.5,metalness:.2}));
+  sole.position.set(0,-.03,.015);shoeGrp.add(sole);
+  // Cleat
+  const cleat=new THREE.Mesh(new THREE.BoxGeometry(.025,.005,.035),mDk);
+  cleat.position.set(0,-.035,.005);shoeGrp.add(cleat);
+  // Heel tab
+  const heel=new THREE.Mesh(new THREE.BoxGeometry(.03,.02,.015),new THREE.MeshStandardMaterial({color:0xff3333,roughness:.6}));
+  heel.position.set(0,0,-.04);shoeGrp.add(heel);
+  kneePivot.add(shoeGrp);
+
+  hipPivot.add(kneePivot);
+  hipPivot.userData={knee:kneePivot,side};
+  return hipPivot;
+}
+const lLeg=mkLeg(1),rLeg=mkLeg(-1);
+hipGrp.add(lLeg,rLeg);
+
+// ═══════════════ OBSTACLES & POWERUPS ═══════════════
+const obstacles=[],powerupObjs=[];
+function mkCliff(){
+  const g=new THREE.Group();
+  const w=RW+6,h=3.5+Math.random()*3,d=1.5+Math.random()*2;
+  const gap=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:0x080404,roughness:1}));
+  gap.position.y=-h/2+.01;gap.receiveShadow=true;g.add(gap);
+  const pm=new THREE.MeshBasicMaterial({color:0xff4d4d});
+  [-1,1].forEach(s=>{
+    const st=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.9,8),pm);st.position.set(s*(RW/2-.3),.45,0);g.add(st);
+    const ref=new THREE.Mesh(new THREE.BoxGeometry(.12,.08,.02),new THREE.MeshBasicMaterial({color:0xffff00}));
+    ref.position.set(s*(RW/2-.3),.65,d/2+.02);g.add(ref);
+  });
+  const ramp=new THREE.Mesh(new THREE.BoxGeometry(RW*.6,.2,1.5),new THREE.MeshStandardMaterial({color:0x886633,roughness:.7}));
+  ramp.position.set(0,.1,d/2+1.8);ramp.rotation.x=.12;ramp.castShadow=true;g.add(ramp);
+  for(let i=0;i<3;i++){
+    const ch=new THREE.Mesh(new THREE.BoxGeometry(RW*.5,.01,.08),new THREE.MeshBasicMaterial({color:i%2===0?0xffaa00:0x222222}));
+    ch.position.set(0,.22,d/2+1.3+i*.25);ch.rotation.x=.12;g.add(ch);
+  }
+  g.userData={type:'cliff',gap:d,reqSpeed:20+S.difficulty*5,cleared:false};return g;
+}
+function mkPU(type){
+  const def=POWERUPS.find(p=>p.type===type);const g=new THREE.Group();
+  const core=new THREE.Mesh(new THREE.SphereGeometry(.25,14,14),new THREE.MeshStandardMaterial({color:def.color,emissive:def.color,emissiveIntensity:.5}));
+  const r1=new THREE.Mesh(new THREE.TorusGeometry(.4,.03,8,28),new THREE.MeshBasicMaterial({color:def.color,transparent:true,opacity:.6}));
+  const r2=r1.clone();r2.rotation.x=Math.PI/2;g.add(core,r1,r2);
+  g.add(new THREE.PointLight(def.color,.8,10));
+  g.userData={type:'powerup',pType:type,def,rot:Math.random()*6,bob:Math.random()*6};return g;
+}
+
+// ═══════════════ SCENERY ═══════════════
+const sceneryGrp=new THREE.Group();scene.add(sceneryGrp);const sceneryItems=[];
+function mkTree(x,z){
+  const g=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.08,.12,1.6,6),new THREE.MeshStandardMaterial({color:0x4a3018,roughness:.9}));
+  trunk.position.y=.8;trunk.castShadow=true;g.add(trunk);
+  const fol=new THREE.Mesh(new THREE.DodecahedronGeometry(.7,1),new THREE.MeshStandardMaterial({color:0x1a4422,roughness:.9}));
+  fol.position.y=2;fol.scale.y=1.4;fol.castShadow=true;g.add(fol);g.position.set(x,0,z);return g;
+}
+function mkLamp(x,z){
+  const g=new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(.03,.04,4,6),new THREE.MeshStandardMaterial({color:0x666666,metalness:.5,roughness:.4})).translateY(2));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(.08,8,8),new THREE.MeshStandardMaterial({color:0xffee88,emissive:0xffcc44,emissiveIntensity:3})).translateY(4.1));
+  g.add(new THREE.PointLight(0xffcc44,.35,14).translateY(4));
+  g.position.set(x,0,z);return g;
+}
+for(let i=0;i<60;i++){
+  const side=i%2===0?-1:1,x=side*(RW/2+1.5+Math.random()*10),z=-i*8-Math.random()*4;
+  const item=Math.random()<.65?mkTree(x,z):mkLamp(x,z);sceneryGrp.add(item);sceneryItems.push(item);
+}
+// Stars
+const sGeo=new THREE.BufferGeometry(),sP=[];
+for(let i=0;i<2000;i++)sP.push((Math.random()-.5)*300,Math.random()*80+10,(Math.random()-.5)*300);
+sGeo.setAttribute('position',new THREE.Float32BufferAttribute(sP,3));
+const stars=new THREE.Points(sGeo,new THREE.PointsMaterial({color:0xffffff,size:.1,transparent:true,opacity:.7}));scene.add(stars);
+
+// Particles
+const PC=180;const pGeo=new THREE.BufferGeometry();
+const pPos=new Float32Array(PC*3),pCol=new Float32Array(PC*3),pVel=[];
+for(let i=0;i<PC;i++){pPos[i*3]=0;pPos[i*3+1]=-10;pPos[i*3+2]=0;pCol[i*3]=1;pCol[i*3+1]=.7;pCol[i*3+2]=.3;pVel.push({x:0,y:0,z:0,life:0,kind:0})}
+pGeo.setAttribute('position',new THREE.Float32BufferAttribute(pPos,3));
+pGeo.setAttribute('color',new THREE.Float32BufferAttribute(pCol,3));
+const parts=new THREE.Points(pGeo,new THREE.PointsMaterial({size:.06,transparent:true,opacity:.8,vertexColors:true}));scene.add(parts);
+function emit(x,y,z,n,col,kind=0){
+  const c=new THREE.Color(col||0xffb84d);
+  for(let i=0;i<PC&&n>0;i++){if(pVel[i].life<=0){
+    pPos[i*3]=x+(Math.random()-.5)*.5;pPos[i*3+1]=y;pPos[i*3+2]=z+(Math.random()-.5)*.5;
+    pCol[i*3]=c.r;pCol[i*3+1]=c.g;pCol[i*3+2]=c.b;
+    if(kind===1)pVel[i]={x:(Math.random()-.5)*.5,y:Math.random()*.3,z:.5+Math.random(),life:.4+Math.random()*.3,kind:1};
+    else pVel[i]={x:(Math.random()-.5)*2.5,y:Math.random()*3.5+1,z:(Math.random()-.5)*2.5,life:.8+Math.random()*.4,kind:0};
+    n--;}}
+  pGeo.attributes.position.needsUpdate=true;pGeo.attributes.color.needsUpdate=true;
+}
+
+// ═══════════════ AUDIO ═══════════════
+let actx;
+function initA(){if(!actx)actx=new(window.AudioContext||window.webkitAudioContext)()}
+function tone(f,d,t='square',v=.04){if(!actx)return;const o=actx.createOscillator(),g=actx.createGain();o.type=t;o.frequency.setValueAtTime(f,actx.currentTime);g.gain.setValueAtTime(v,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+d);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+d)}
+function sndPedal(){tone(140+S.gear*22,.04,'triangle',.03)}
+function sndShift(up){tone(up?420:200,.08,'square',.025);setTimeout(()=>tone(up?620:300,.08,'square',.025),45)}
+function sndPerfect(){tone(523,.1,'sine',.05);setTimeout(()=>tone(659,.1,'sine',.05),70);setTimeout(()=>tone(784,.15,'sine',.04),140);setTimeout(()=>tone(1047,.2,'sine',.03),220)}
+function sndCrash(){tone(80,.5,'sawtooth',.08);tone(45,.7,'sawtooth',.06)}
+function sndPowerup(){if(!actx)return;[523,659,784,1047].forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.04,actx.currentTime+i*.07);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+i*.07+.25);o.connect(g).connect(actx.destination);o.start(actx.currentTime+i*.07);o.stop(actx.currentTime+i*.07+.25)})}
+function sndCombo(){tone(880,.1,'sine',.03)}
+let windOsc,windGain;
+function updateWind(){if(!actx)return;if(!windOsc){windOsc=actx.createOscillator();windGain=actx.createGain();windOsc.frequency.value=60;windGain.gain.value=0;windOsc.connect(windGain).connect(actx.destination);windOsc.start()}windGain.gain.setTargetAtTime(Math.min(.1,S.speed/800),actx.currentTime,.15);windOsc.frequency.setTargetAtTime(40+S.speed*1.5,actx.currentTime,.15)}
+
+// ═══════════════ HUD ═══════════════
+const $=id=>document.getElementById(id);
+function updHUD(){
+  $('h-score').textContent=Math.floor(S.score).toLocaleString();
+  const spd=Math.floor(S.speed);$('h-speed').textContent=spd;
+  $('h-speed').style.color=spd>80?'#ff4d8b':spd>50?'#ffb84d':'#fff';
+  $('h-gear').textContent=S.gear;$('h-gname').textContent=GEARS[S.gear].name;
+  $('h-dist').textContent=Math.floor(S.distance).toLocaleString();$('h-best').textContent=HS.toLocaleString();
+  const gd=GEARS[S.gear],rN=Math.min(1,S.rpm);
+  $('rpm-fill').style.height=(rN*100)+'%';
+  $('rpm-sweet').style.bottom=(gd.sMin*100)+'%';$('rpm-sweet').style.height=((gd.sMax-gd.sMin)*100)+'%';
+  const inS=S.rpm>=gd.sMin&&S.rpm<=gd.sMax;
+  $('rpm-fill').style.background=inS?'linear-gradient(to top,#4dffb8,#66ffcc)':S.rpm>gd.sMax?'linear-gradient(to top,#ff8844,#ff4d4d)':'linear-gradient(to top,#4488cc,#4db8ff44)';
+  $('energy-fill').style.height=(S.energy*100)+'%';
+  const eBar=$('energy-bar-el');if(S.energy<.2)eBar.classList.add('low');else eBar.classList.remove('low');
+  const pct=Math.round(S.incline*100);
+  const icon=pct>2?'▲':pct<-2?'▼':'—';
+  $('h-incline').textContent=icon+' '+(pct>0?'+':'')+pct+'%';
+  $('h-incline').style.color=pct>5?'#ff4d4d':pct>2?'#ffb84d':pct<-2?'#4dffb8':'#ffffff44';
+  if(S.combo>1){$('combo-bar').textContent='COMBO ×'+S.combo;$('combo-bar').classList.add('on');$('combo-bar').style.color=S.combo>=20?'#ff4d8b':S.combo>=10?'#ffb84d':'#4dffb8'}else $('combo-bar').classList.remove('on');
+  if(S.pedalInterval>0){const ideal=60000/gd.bpm,ratio=Math.min(1,ideal/Math.max(1,S.pedalInterval)),circ=276.5;$('pedal-progress').style.strokeDashoffset=circ-circ*ratio;$('pedal-progress').style.stroke=inS?'#4dffb8':S.rpm>gd.sMax?'#ff4d4d':'#4db8ff'}
+  if(S.activePowerup){$('pu-icon').textContent=S.activePowerup.icon;$('pu-label').textContent=S.activePowerup.msg.split(' ').slice(1).join(' ');$('pu-timer').textContent=Math.ceil(S.powerupTimer)+'s';const pc='#'+S.activePowerup.color.toString(16).padStart(6,'0');$('pu-timer').style.color=pc;$('pu-label').style.color=pc;$('powerup-status').classList.add('show')}else $('powerup-status').classList.remove('show');
+  const hint=$('shift-hint');
+  // Find optimal gear for current speed
+  let optGear=1;
+  for(let g=GEARS.length-1;g>=1;g--){if(S.speed>=GEARS[g].optSpd[0]&&S.speed<=GEARS[g].optSpd[1]){optGear=g;break}}
+  // Show hint based on RPM + gear efficiency
+  const [oL,oH]=gd.optSpd;
+  const inOptSpd=S.speed>=oL&&S.speed<=oH;
+  if(S.rpm>gd.sMax&&S.gear<S.maxGear){hint.textContent='▲ SHIFT UP';hint.style.color='#ff4d4d';hint.style.opacity=1}
+  else if(S.rpm<gd.sMin*.7&&S.gear>1){hint.textContent='▼ SHIFT DOWN';hint.style.color='#4db8ff';hint.style.opacity=1}
+  else if(!inOptSpd&&S.speed>5){
+    // Wrong gear for speed
+    if(S.speed<oL&&S.gear>1){hint.textContent='▼ GEAR TOO HIGH FOR '+Math.floor(S.speed)+' KM/H';hint.style.color='#ffb84d';hint.style.opacity=.8}
+    else if(S.speed>oH&&S.gear<S.maxGear){hint.textContent='▲ GEAR TOO LOW';hint.style.color='#ffb84d';hint.style.opacity=.8}
+    else hint.style.opacity=0;
+  }else hint.style.opacity=0;
+  // Color gear number: green=efficient, orange=mismatch, red=way off
+  $('h-gear').style.color=inOptSpd?'#4dffb8':Math.abs(S.speed-(oL+oH)/2)>30?'#ff4d4d':'#ffb84d';
+}
+function floatText(txt,col='#4dffb8'){const f=$('float-text');f.textContent=txt;f.style.color=col;f.classList.remove('show');void f.offsetWidth;f.classList.add('show');clearTimeout(f._t);f._t=setTimeout(()=>f.classList.remove('show'),900)}
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000)}
+function showZone(z){$('z-name').textContent=z.name;$('z-name').style.color='#'+z.col.toString(16).padStart(6,'0');$('z-sub').textContent='ZONE '+(ZONES.indexOf(z)+1);const b=$('zone-banner');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),3000)}
+function flash(col='#ffffff'){const f=$('flash-overlay');f.style.background=col;f.style.opacity=.35;setTimeout(()=>f.style.opacity=0,80)}
+
+// ═══════════════ GAME LOGIC ═══════════════
+function pedal(){
+  if(!S.alive||!S.started)return;
+  if(S.energy<=0&&S.speed<2){floatText('NO ENERGY!','#ff4d4d');return}
+  initA();sndPedal();
+  const now=performance.now();if(S.lastPedal>0)S.pedalInterval=now-S.lastPedal;S.lastPedal=now;S.pedalCount++;
+  const gd=GEARS[S.gear];
+  const inS=S.rpm>=gd.sMin&&S.rpm<=gd.sMax;
+
+  // === ENERGY COST CALCULATION ===
+  // Base cost from gear
+  let cost=gd.eCost;
+  // Sweet spot bonus: 50% cheaper when in the green zone!
+  if(inS) cost*=0.5;
+  // Gear efficiency: is this the right gear for our speed?
+  const [optLo,optHi]=gd.optSpd;
+  const optMid=(optLo+optHi)/2;
+  if(S.speed>=optLo&&S.speed<=optHi){
+    // In optimal speed range for this gear — very efficient
+    cost*=0.7;
+  }else{
+    // Wrong gear for this speed — penalty!
+    // Too high a gear at low speed = grinding = expensive
+    const offBy=S.speed<optLo?((optLo-S.speed)/optMid):((S.speed-optHi)/optMid);
+    cost*=(1+offBy*1.5);
+  }
+  // Incline penalty (uphill costs more)
+  const incP=Math.max(0,S.incline)*2;
+  cost*=(1+incP);
+  // Gravity powerup halves cost
+  if(S.activePowerup&&S.activePowerup.type==='GRAVITY')cost*=0.5;
+  S.energy=Math.max(0,S.energy-cost);
+
+  // === RPM GAIN (per-gear, higher for low gears) ===
+  S.rpm=Math.min(1,S.rpm+gd.rpmGain);
+
+  // === SPEED GAIN ===
+  let boost=inS?1.8:.6;
+  if(S.activePowerup&&S.activePowerup.type==='SPEED')boost*=1.35;
+  const incE=1-S.incline*3;
+  const topSpd=gd.top*(S.activePowerup&&S.activePowerup.type==='SPEED'?1.4:1);
+  S.speed=Math.min(topSpd,S.speed+gd.ratio*boost*2.2*Math.max(.2,incE));
+
+  // === COMBO & SCORE ===
+  if(inS){
+    S.combo++;if(S.combo>S.bestCombo)S.bestCombo=S.combo;
+    const sm=S.activePowerup&&S.activePowerup.type==='SCORE'?2:1;
+    S.score+=(1+S.combo*.5)*S.gear*sm;
+    $('h-score').classList.add('bump');setTimeout(()=>$('h-score').classList.remove('bump'),100);
+    if(S.combo===5){floatText('🔥 ON FIRE!','#ffb84d');sndCombo()}
+    if(S.combo===10){floatText('⚡ UNSTOPPABLE!','#ff4d8b');sndCombo()}
+    if(S.combo===25){floatText('💀 LEGENDARY!','#aa44ff');sndCombo()}
+  }else{
+    if(S.combo>=5)floatText('COMBO LOST','#ff4d4d');
+    // Show why they lost — wrong RPM
+    if(S.rpm>gd.sMax&&S.combo<2)floatText('TOO FAST — SHIFT UP!','#ff884d');
+    else if(S.rpm<gd.sMin&&S.combo<2&&S.speed>3)floatText('TOO SLOW — SHIFT DOWN!','#4db8ff');
+    S.combo=0;
+  }
+  crankGrp.rotation.x+=Math.PI/3;
+  $('pedal-btn').classList.add('pressed');setTimeout(()=>$('pedal-btn').classList.remove('pressed'),70);
+}
+function shift(dir){
+  if(!S.alive||!S.started)return;initA();
+  const ng=Math.max(1,Math.min(S.maxGear,S.gear+dir));if(ng===S.gear)return;
+  const el=$('h-gear');el.classList.remove('shift-up','shift-down');void el.offsetWidth;el.classList.add(dir>0?'shift-up':'shift-down');
+  const oldR=S.rpm;S.gear=ng;if(ng>S.topGearUsed)S.topGearUsed=ng;sndShift(dir>0);
+  const gd=GEARS[S.gear];
+  if(oldR>=gd.sMin*.85&&oldR<=gd.sMax*1.15){floatText('PERFECT SHIFT!','#4dffb8');flash('#4dffb8');sndPerfect();S.score+=150*S.gear;S.stats.perfects++;emit(bikeGrp.position.x,1.5,bikeGrp.position.z,25,0x4dffb8)}
+  S.rpm=dir>0?S.rpm*.55:Math.min(1,S.rpm*1.4);updHUD();
+}
+function changeLane(dir){if(!S.alive||!S.started)return;const nL=S.lane+dir;if(nL>=0&&nL<LANES.length)S.lane=nL}
+function die(){
+  S.alive=false;sndCrash();S.shake=1.2;flash('#ff0000');
+  if(windGain)windGain.gain.setTargetAtTime(0,actx.currentTime,.1);
+  const isNew=S.score>HS;if(isNew){HS=Math.floor(S.score);localStorage.setItem('gg_hs3',HS)}
+  let grade='D';
+  if(S.score>200000)grade='S+';else if(S.score>150000)grade='S';else if(S.score>100000)grade='A+';
+  else if(S.score>75000)grade='A';else if(S.score>50000)grade='B+';else if(S.score>30000)grade='B';else if(S.score>15000)grade='C';
+  setTimeout(()=>{
+    $('go-grade').textContent=grade;
+    $('go-grade').style.color=grade[0]==='S'?'#ff4d8b':grade[0]==='A'?'#4dffb8':grade==='B+'||grade==='B'?'#ffb84d':'#ffffff88';
+    $('go-dist').textContent=Math.floor(S.distance)+'m';$('go-maxspd').textContent=Math.floor(S.maxSpeed)+' km/h';
+    $('go-perfect').textContent=S.stats.perfects;$('go-cliffs').textContent=S.stats.cliffs;
+    $('go-topgear').textContent=S.topGearUsed+'/12';$('go-combo').textContent=S.bestCombo+'×';
+    $('go-score').textContent=Math.floor(S.score).toLocaleString();$('go-hs').textContent='HIGH SCORE: '+HS.toLocaleString();
+    $('go-new').style.display=isNew?'block':'none';$('go-screen').classList.add('show');$('hud').style.display='none';
+    setTimeout(()=>$('go-grade').classList.add('pop'),200);
+    document.querySelectorAll('.go-stat').forEach((el,i)=>setTimeout(()=>el.classList.add('show'),350+i*80));
+  },900);
+}
+function reset(){
+  Object.assign(S,{score:0,distance:0,speed:0,maxSpeed:0,gear:1,topGearUsed:1,rpm:0,combo:0,bestCombo:0,energy:1,alive:true,lastPedal:0,pedalInterval:0,pedalCount:0,difficulty:1,zone:0,shake:0,frame:0,incline:0,targetIncline:0,nextInclineChange:500,lane:1,laneX:0,activePowerup:null,powerupTimer:0,invulnerable:0,stats:{perfects:0,cliffs:0,powerups:0}});
+  bikeGrp.position.set(0,0,0);bikeGrp.rotation.set(0,0,0);
+  obstacles.forEach(o=>scene.remove(o));obstacles.length=0;
+  powerupObjs.forEach(p=>scene.remove(p));powerupObjs.length=0;
+  sceneryItems.forEach((it,i)=>{it.position.z=-i*8-Math.random()*4});
+  $('go-screen').classList.remove('show');$('go-grade').classList.remove('pop');
+  document.querySelectorAll('.go-stat').forEach(el=>el.classList.remove('show'));
+  $('hud').style.display='block';nextCliffDist=250;nextPowerupDist=150;
+  const z=ZONES[0];scene.fog.color.set(z.fog);renderer.setClearColor(z.fog);pLight.color.set(z.col);
+}
+
+// ═══════════════ INPUT ═══════════════
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'){e.preventDefault();pedal()}
+  if(e.code==='ArrowUp'){e.preventDefault();shift(1)}
+  if(e.code==='ArrowDown'){e.preventDefault();shift(-1)}
+  if(e.code==='ArrowLeft'){e.preventDefault();changeLane(-1)}
+  if(e.code==='ArrowRight'){e.preventDefault();changeLane(1)}
+});
+$('pedal-btn').addEventListener('pointerdown',e=>{e.preventDefault();pedal()});
+let lastScroll=0;
+window.addEventListener('wheel',e=>{const n=performance.now();if(n-lastScroll<130)return;lastScroll=n;shift(e.deltaY<0?1:-1)},{passive:true});
+let tsx=0,tsy=0;
+document.addEventListener('touchstart',e=>{tsx=e.touches[0].clientX;tsy=e.touches[0].clientY},{passive:true});
+document.addEventListener('touchmove',e=>{const dx=e.touches[0].clientX-tsx,dy=e.touches[0].clientY-tsy;if(Math.abs(dx)>Math.abs(dy)){if(Math.abs(dx)>28){changeLane(dx>0?1:-1);tsx=e.touches[0].clientX}}else{if(Math.abs(dy)>28){shift(dy<0?1:-1);tsy=e.touches[0].clientY}}},{passive:true});
+$('start-btn').onclick=()=>{initA();$('start-screen').style.display='none';$('hud').style.display='block';S.started=true;reset()};
+$('retry-btn').onclick=()=>{reset();S.started=true};
+$('share-btn').onclick=()=>{const t='🚴 GEAR GRINDER ULTIMATE\n'+$('go-grade').textContent+' Grade | '+Math.floor(S.score).toLocaleString()+' pts\n'+Math.floor(S.distance)+'m | '+Math.floor(S.maxSpeed)+' km/h';if(navigator.share)navigator.share({title:'GEAR GRINDER',text:t}).catch(()=>{});else navigator.clipboard.writeText(t).then(()=>toast('COPIED!'))};
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+// ═══════════════ MAIN LOOP ═══════════════
+let lastT=performance.now(),nextCliffDist=250,nextPowerupDist=150;
+
+function update(dt){
+  if(!S.alive||!S.started)return;
+  S.frame++;
+  // Lane interpolation
+  const targetX=LANES[S.lane];
+  S.laneX+=(targetX-S.laneX)*dt*8;
+  bikeGrp.position.x=S.laneX;
+  bikeGrp.rotation.y=(targetX-S.laneX)*0.15; // Lean into turn
+
+  const gd=GEARS[S.gear];
+  // RPM decay
+  S.rpm=Math.max(0,S.rpm-dt*.22*gd.ratio);
+  // Drag + incline
+  const gravity=S.incline<0?-S.incline*8:0;
+  const drag=2.5+S.incline*15;
+  S.speed=Math.max(0,S.speed-dt*drag+dt*gravity);
+  // Energy recovery when coasting
+  const timeSince=(performance.now()-S.lastPedal)/1000;
+  if(timeSince>1){
+    const rec=(.08-Math.max(0,S.incline)*.15)*(S.incline<0?1.5:1);
+    S.energy=Math.min(1,S.energy+dt*Math.max(.02,rec));
+  }
+  if(S.speed>S.maxSpeed)S.maxSpeed=S.speed;
+  const mz=S.speed*dt*.5;
+  S.distance+=mz;
+  const scoreMult=S.activePowerup&&S.activePowerup.type==='SCORE'?2:1;
+  S.score+=mz*.5*(1+S.combo*.1)*scoreMult;
+  S.difficulty=1+S.distance/700;
+
+  // Powerup timer
+  if(S.activePowerup){S.powerupTimer-=dt;if(S.powerupTimer<=0){S.activePowerup=null;toast('POWERUP EXPIRED')}}
+  if(S.invulnerable>0)S.invulnerable-=dt;
+
+  // Incline
+  if(S.distance>=S.nextInclineChange){
+    const maxInc=Math.min(.12,S.difficulty*.025); // Caps at 12% even at high difficulty
+    S.targetIncline=(Math.random()-.45)*maxInc*2; // Slightly biased toward uphill
+    S.targetIncline=Math.max(-.08,Math.min(.12,S.targetIncline)); // Hard clamp
+    S.nextInclineChange=S.distance+200+Math.random()*300;
+  }
+  S.incline+=(S.targetIncline-S.incline)*dt*.8;
+
+  // Zone transitions (smooth lerp)
+  for(let i=ZONES.length-1;i>=0;i--){
+    if(S.distance>=ZONES[i].dist){
+      if(S.zone!==i){S.zone=i;showZone(ZONES[i])}
+      const z=ZONES[i];
+      const fc=new THREE.Color(scene.fog.color);fc.lerp(new THREE.Color(z.fog),dt*.5);
+      scene.fog.color.copy(fc);renderer.setClearColor(fc);
+      const pc=new THREE.Color(pLight.color);pc.lerp(new THREE.Color(z.col),dt*.5);pLight.color.copy(pc);
+      const gc=new THREE.Color(gndMat.color);gc.lerp(new THREE.Color(z.gnd),dt*.5);gndMat.color.copy(gc);
+      // Lerp road + lines
+      roadSegs.forEach(s=>{
+        s.material.color.lerp(new THREE.Color(z.road),dt*.3);
+        s.userData.lines.forEach(l=>l.material.color.lerp(new THREE.Color(z.line),dt*.3));
+      });
+      break;
+    }
+  }
+
+  // Spawn cliffs
+  if(S.distance>=nextCliffDist){
+    const c=mkCliff();c.position.z=-RCOUNT*RSL;
+    c.userData.reqSpeed=20+S.difficulty*6+Math.random()*5;
+    scene.add(c);obstacles.push(c);
+    nextCliffDist=S.distance+200+Math.random()*(300-S.difficulty*20);
+  }
+  // Spawn powerups
+  if(S.distance>=nextPowerupDist){
+    const safe=!obstacles.some(o=>o.position.z>-RCOUNT*RSL-20&&o.position.z<-RCOUNT*RSL+20);
+    if(safe){
+      const type=POWERUPS[Math.floor(Math.random()*POWERUPS.length)].type;
+      const p=mkPU(type);p.position.set(LANES[Math.floor(Math.random()*3)],1,-RCOUNT*RSL);
+      scene.add(p);powerupObjs.push(p);
+    }
+    nextPowerupDist=S.distance+150+Math.random()*100+S.difficulty*10;
+  }
+
+  // Scroll road
+  roadSegs.forEach(seg=>{
+    seg.position.z+=mz;seg.userData.lines.forEach(l=>l.position.z+=mz);
+    if(seg.position.z>RSL*2){const off=RCOUNT*RSL;seg.position.z-=off;seg.userData.lines.forEach(l=>l.position.z-=off)}
+  });
+  // Scroll scenery
+  sceneryItems.forEach(it=>{it.position.z+=mz;if(it.position.z>20)it.position.z-=RCOUNT*RSL+Math.random()*20});
+  stars.position.z+=mz*.1;
+
+  // Obstacle logic
+  let warn=false;
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];o.position.z+=mz;
+    if(o.position.z>-40&&o.position.z<-4&&!o.userData.cleared){
+      warn=true;$('cliff-warn').innerHTML='⚠ CLIFF — NEED '+Math.floor(o.userData.reqSpeed)+' KM/H ⚠';
+    }
+    if(o.position.z>-o.userData.gap/2&&o.position.z<o.userData.gap/2&&!o.userData.cleared){
+      if(S.speed>=o.userData.reqSpeed){
+        o.userData.cleared=true;const bonus=Math.floor(200*S.difficulty);S.score+=bonus;S.stats.cliffs++;
+        floatText('CLEARED! +'+bonus,'#4dffb8');emit(0,2,0,25,0x4dffb8);
+        tone(600,.1,'sine');tone(900,.2,'sine');
+      }else{die();return}
+    }
+    if(o.position.z>20){scene.remove(o);obstacles.splice(i,1)}
+  }
+  $('cliff-warn').classList.toggle('show',warn);
+
+  // Powerup logic
+  for(let i=powerupObjs.length-1;i>=0;i--){
+    const p=powerupObjs[i];p.position.z+=mz;
+    p.rotation.y+=dt*2;p.userData.bob+=dt*4;p.position.y=1+Math.sin(p.userData.bob)*.2;
+    // Collect check
+    if(Math.abs(p.position.z)<1.5&&Math.abs(p.position.x-bikeGrp.position.x)<1){
+      const def=p.userData.def;S.activePowerup=def;S.powerupTimer=def.dur;S.stats.powerups++;
+      if(p.userData.pType==='ENERGY'){S.energy=Math.min(1,S.energy+.5);S.invulnerable=.5}
+      floatText(def.msg,'#'+def.color.toString(16).padStart(6,'0'));
+      sndPowerup();emit(p.position.x,1,0,30,def.color);
+      scene.remove(p);powerupObjs.splice(i,1);
+    }else if(p.position.z>10){scene.remove(p);powerupObjs.splice(i,1)}
+  }
+
+  // Tire dust
+  if(S.speed>5)emit(bikeGrp.position.x,0,1.2,1,0x888888,1);
+
+  // Speed lines FX
+  $('speed-lines').style.opacity=Math.max(0,(S.speed-40)/60);
+  camera.fov=60+S.speed/100*12;camera.updateProjectionMatrix();
+
+  // ═══ BIKE ANIMATION ═══
+  const wSpd=S.speed*.3;
+  frontW.rotation.x+=wSpd*dt;rearW.rotation.x+=wSpd*dt;
+  crankGrp.rotation.x+=S.rpm*dt*5;
+  chainring.rotation.x+=S.rpm*dt*5;
+  sprocket.rotation.x+=S.rpm*dt*5*gd.ratio;
+  bikeGrp.rotation.x+=(-S.incline*.6-bikeGrp.rotation.x)*dt*3;
+  bikeGrp.position.y=Math.sin(S.frame*.12)*.012*Math.min(1,S.speed/10);
+
+  // ═══ RIDER ANIMATION ═══
+  const pedalAngle=crankGrp.rotation.x;
+  const breathe=Math.sin(S.frame*.04)*.005;
+  const speedCrouch=Math.min(.20,S.speed*.0025);
+
+  // Spine leans forward from hips (more aero at speed)
+  spineGrp.rotation.x=-.65-speedCrouch+breathe; // Negative = lean forward in local space
+  // Head counter-rotates to look ahead
+  neckGrp.rotation.x=-spineGrp.rotation.x*.5-.1;
+  headGrp.rotation.x=.15+speedCrouch*.3;
+  // Head micro-movement when sprinting
+  if(S.rpm>.5)headGrp.rotation.z=Math.sin(pedalAngle)*.015*S.rpm;
+  else headGrp.rotation.z*=.9;
+
+  // Legs — cycling motion from hip pivots (legs are on hipGrp)
+  const lPhase=pedalAngle,rPhase=pedalAngle+Math.PI;
+  // Hip flexion/extension
+  lLeg.rotation.x=Math.sin(lPhase)*.55+.35;
+  lLeg.userData.knee.rotation.x=-(Math.abs(Math.cos(lPhase))*.9+.45);
+  rLeg.rotation.x=Math.sin(rPhase)*.55+.35;
+  rLeg.userData.knee.rotation.x=-(Math.abs(Math.cos(rPhase))*.9+.45);
+
+  // Arms — reaching forward-down toward handlebars
+  const armSway=Math.sin(pedalAngle*.5)*.04;
+  const sprintPull=S.rpm>.6?Math.sin(pedalAngle)*.035:0;
+  // Upper arm angles down and slightly out
+  lArm.rotation.x=-1.1-speedCrouch*.5+armSway+sprintPull;
+  lArm.rotation.z=.15;
+  lArm.userData.elbow.rotation.x=.6+speedCrouch*.8;
+  if(lArm.userData.wrist)lArm.userData.wrist.rotation.x=.15;
+
+  rArm.rotation.x=-1.1-speedCrouch*.5-armSway-sprintPull;
+  rArm.rotation.z=-.15;
+  rArm.userData.elbow.rotation.x=.6+speedCrouch*.8;
+  if(rArm.userData.wrist)rArm.userData.wrist.rotation.x=.15;
+
+  // Body rock when pedaling hard
+  if(S.rpm>.4){
+    const rock=Math.sin(pedalAngle)*.025*Math.min(1,S.rpm);
+    spineGrp.rotation.z=rock;
+    hipGrp.rotation.z=rock*.3;
+  }else{
+    spineGrp.rotation.z*=.92;
+    hipGrp.rotation.z*=.92;
+  }
+
+  // ═══ CAMERA ═══
+  camera.position.x+=(bikeGrp.position.x*.5-camera.position.x)*dt*3;
+  const tcz=7.5-S.speed*.03,tcy=3.5+S.speed*.01+S.incline*2;
+  camera.position.z+=(tcz-camera.position.z)*.05;
+  camera.position.y+=(tcy-camera.position.y)*.05;
+  if(S.shake>0){camera.position.x+=(Math.random()-.5)*S.shake;camera.position.y+=(Math.random()-.5)*S.shake*.7;S.shake*=.88;if(S.shake<.01)S.shake=0}
+  camera.lookAt(bikeGrp.position.x*.3,1.1+S.incline*2,-2);
+
+  // Lights follow
+  sun.position.set(8,18,bikeGrp.position.z+5);sun.target.position.set(0,0,bikeGrp.position.z);
+  pLight.position.set(0,3,bikeGrp.position.z);
+
+  // Particles update
+  for(let i=0;i<PC;i++){const v=pVel[i];if(v.life>0){pPos[i*3]+=v.x*dt;pPos[i*3+1]+=v.y*dt;pPos[i*3+2]+=v.z*dt;if(v.kind===0)v.y-=5*dt;v.life-=dt*(v.kind===1?1.5:2);if(v.life<=0)pPos[i*3+1]=-10}}
+  pGeo.attributes.position.needsUpdate=true;
+
+  // Road tilt (very subtle - just visual hint, don't actually rotate far segments off screen)
+  roadGrp.rotation.x+=(-S.incline*.08-roadGrp.rotation.x)*dt*2;
+  // Ground plane follows camera
+  gnd.position.z=camera.position.z-200;
+
+  // Audio
+  updateWind();
+
+  // Death check
+  if(S.energy<=0&&S.speed<=.5&&S.distance>20)die();
+
+  updHUD();
+}
+
+function loop(){
+  requestAnimationFrame(loop);
+  const now=performance.now(),dt=Math.min(.06,(now-lastT)/1000);lastT=now;
+  update(dt);renderer.render(scene,camera);
+}
+loop();
+</script>
+</body>
+</html>
