@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>GEAR GRINDER — MULTIPLAYER LOBBY EDITION</title>
-<!-- MQTT Library for Multiplayer -->
+<title>GEAR GRINDER — PATCHED EDITION</title>
+<!-- MQTT Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&display=swap');
@@ -12,7 +12,7 @@
 body{background:#05070a;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none}
 canvas{display:block;outline:none}
 
-/* --- OVERLAYS --- */
+/* --- HUD & UI LAYERS --- */
 #vignette{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 60%,transparent 35%,#000000cc 85%,#000 100%);z-index:5}
 #terrain-tint{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity 1.5s,background 1.5s;z-index:4}
 #speed-lines{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;z-index:4;background:radial-gradient(ellipse at 50% 50%,transparent 30%,rgba(255,255,255,.02) 60%,transparent 61%);mix-blend-mode:screen}
@@ -22,7 +22,7 @@ canvas{display:block;outline:none}
 #shift-flash.down{background:linear-gradient(to bottom,transparent 30%,#4db8ff22 60%,#4db8ff44 100%)}
 #shift-hint{position:absolute;top:23%;left:50%;transform:translate(-50%,-50%);font-family:'Orbitron',monospace;font-size:14px;color:#ff4d4d;text-shadow:0 0 15px #ff4d4d88;opacity:0;transition:opacity .3s;z-index:15;pointer-events:none;letter-spacing:6px;font-weight:900}
 
-/* --- HUD --- */
+/* --- HUD ELEMENTS --- */
 #hud{position:fixed;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:10;display:none}
 #hud>*{pointer-events:auto}
 .hud-score{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-align:center}
@@ -103,11 +103,12 @@ canvas{display:block;outline:none}
 
 #start-btn{padding:14px 60px;border:1.5px solid #ff6b3d55;border-radius:50px;background:#ff6b3d0a;color:#ff6b3d;font-family:'Bebas Neue',monospace;font-size:22px;letter-spacing:8px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
 #start-btn:hover{background:#ff6b3d1a;border-color:#ff6b3d99;box-shadow:0 0 40px #ff6b3d22}
+#start-btn:disabled{opacity:0.5;cursor:wait;filter:grayscale(1)}
 #start-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,#ff6b3d22,transparent);transform:translateX(-100%);animation:btnShine 2.5s infinite}
 @keyframes btnShine{0%,70%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 
 /* --- LOBBY SCREEN --- */
-#lobby-screen{position:fixed;inset:0;z-index:110;display:none;flex-direction:column;align-items:center;justify-content:center;background:#06080eee;backdrop-filter:blur(20px)}
+#lobby-screen{position:fixed;inset:0;z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;background:#06080eee;backdrop-filter:blur(20px)}
 #lobby-screen.show{display:flex}
 .lobby-header{font-family:'Bebas Neue';font-size:40px;color:#fff;margin-bottom:10px;text-shadow:0 0 20px #ffffff44}
 .lobby-room-code{font-family:'Orbitron';font-size:18px;color:#4dffb8;margin-bottom:30px;letter-spacing:4px;background:#4dffb811;padding:8px 24px;border-radius:30px;border:1px solid #4dffb844}
@@ -122,7 +123,7 @@ canvas{display:block;outline:none}
 .lobby-wait-msg{margin-top:15px;color:#ffffff44;font-size:10px;font-family:'Orbitron';letter-spacing:2px}
 
 /* --- COUNTDOWN --- */
-#countdown-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:250px;color:#fff;text-shadow:0 0 50px #ff4d8b;pointer-events:none;background:#00000088}
+#countdown-overlay{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;font-family:'Bebas Neue';font-size:250px;color:#fff;text-shadow:0 0 50px #ff4d8b;pointer-events:none;background:#00000088}
 
 /* --- GAME OVER --- */
 #go-screen{position:fixed;inset:0;z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;background:#06080eee;backdrop-filter:blur(16px)}
@@ -144,7 +145,7 @@ canvas{display:block;outline:none}
 #retry-btn{background:#ff6b3d0a;border-color:#ff6b3d55;color:#ff6b3d}#retry-btn:hover{background:#ff6b3d22}
 #share-btn{background:#4db8ff0a;border-color:#4db8ff55;color:#4db8ff}#share-btn:hover{background:#4db8ff22}
 
-#toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#4dffb80e;border:1px solid #4dffb833;color:#4dffb8;padding:6px 20px;border-radius:30px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;opacity:0;transition:opacity .4s;z-index:200;pointer-events:none}
+#toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:#4dffb80e;border:1px solid #4dffb833;color:#4dffb8;padding:6px 20px;border-radius:30px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:3px;opacity:0;transition:opacity .4s;z-index:400;pointer-events:none}
 #toast.show{opacity:1}
 @media(max-width:600px){.hud-score-val{font-size:32px}.hud-speed-val{font-size:40px}.hud-gear-val{font-size:44px}#start-screen h1{font-size:42px;letter-spacing:6px}.hud-rpm-bar,.hud-energy-bar{height:150px;width:18px}.go-score{font-size:36px}.go-grade-val{font-size:70px}}
 </style>
@@ -152,6 +153,7 @@ canvas{display:block;outline:none}
 <body>
 <div id="vignette"></div><div id="terrain-tint"></div><div id="speed-lines"></div><div id="flash-overlay"></div><div id="shift-flash"></div><div id="shift-hint"></div>
 
+<!-- START SCREEN -->
 <div id="start-screen"><div class="bg-grid"></div><div class="bg-glow"></div><div id="start-content">
 <h1>GEAR GRINDER</h1><div class="start-edition">MULTIPLAYER EDITION</div>
 <input type="text" id="room-input" class="room-input" placeholder="ENTER ROOM NAME" value="RACE1">
@@ -163,6 +165,7 @@ canvas{display:block;outline:none}
 <span class="key">⚡🔥✨🪶</span><span>Energy · Speed · Score · Gravity</span>
 </div><button id="start-btn">ENTER LOBBY</button></div></div>
 
+<!-- LOBBY SCREEN -->
 <div id="lobby-screen">
   <div class="lobby-header">MULTIPLAYER LOBBY</div>
   <div class="lobby-room-code" id="lobby-room-display">ROOM: RACE1</div>
@@ -170,11 +173,13 @@ canvas{display:block;outline:none}
     <!-- Players populate here -->
   </div>
   <button id="lobby-start-btn">START RACE</button>
-  <div class="lobby-wait-msg">WAITING FOR HOST TO START...</div>
+  <div class="lobby-wait-msg">ANYONE CAN START THE RACE</div>
 </div>
 
+<!-- COUNTDOWN -->
 <div id="countdown-overlay">3</div>
 
+<!-- GAME OVER -->
 <div id="go-screen"><div class="go-new" id="go-new" style="display:none">★ NEW RECORD ★</div>
 <h2>WIPEOUT</h2><div class="go-grade-wrap"><div class="go-grade-label">PERFORMANCE</div><div class="go-grade-val" id="go-grade">A</div></div>
 <div class="go-grid">
@@ -184,6 +189,7 @@ canvas{display:block;outline:none}
 </div><div class="go-score" id="go-score">0</div><div class="go-hs" id="go-hs">HIGH SCORE: 0</div>
 <div class="go-btns"><button class="go-btn" id="retry-btn">RETRY</button><button class="go-btn" id="share-btn">SHARE</button></div></div>
 
+<!-- HUD -->
 <div id="hud">
 <div class="hud-score"><div class="hud-score-label">SCORE</div><div class="hud-score-val" id="h-score">0</div><div id="combo-bar">COMBO ×1</div></div>
 <div id="powerup-status"><span class="pu-icon" id="pu-icon"></span><span class="pu-label" id="pu-label"></span><span class="pu-timer" id="pu-timer"></span></div>
@@ -741,14 +747,14 @@ function showZone(z){$('z-name').textContent=z.name;$('z-name').style.color='#'+
 function flash(col='#ffffff'){const f=$('flash-overlay');f.style.background=col;f.style.opacity=.35;setTimeout(()=>f.style.opacity=0,80)}
 
 // ═══════════════════════════════════════════════════════════════
-// MULTIPLAYER LOGIC (LOBBY + GHOSTS)
+// MULTIPLAYER LOGIC (LOBBY + GHOSTS) - PORT 8084 PATCHED
 // ═══════════════════════════════════════════════════════════════
 const MP = {
   client: null,
   room: "RACE1",
   id: "RIDER_" + Math.floor(Math.random() * 9999),
-  state: "DISCONNECTED", // DISCONNECTED, LOBBY, RACING
-  players: {}, // { id: { name, ready, mesh } }
+  state: "DISCONNECTED", 
+  players: {}, 
   lastSent: 0
 };
 
@@ -756,8 +762,20 @@ const matHolo = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true, 
 
 function initMP(roomCode) {
   MP.room = roomCode;
-  MP.client = new Paho.MQTT.Client("broker.emqx.io", 8083, MP.id);
-  MP.client.onConnectionLost = (o) => console.log("MP Lost", o);
+  
+  // PATCH: Use Port 8084 for WSS (HTTPS compatible)
+  // 8083 is WS, 8084 is WSS on broker.emqx.io
+  try {
+    MP.client = new Paho.MQTT.Client("broker.emqx.io", 8084, MP.id);
+  } catch(e) {
+    alert("Network Error: MQTT Blocked?");
+    return;
+  }
+
+  MP.client.onConnectionLost = (o) => {
+    console.log("MP Lost", o);
+    if(MP.state === "LOBBY") toast("CONNECTION LOST");
+  };
   MP.client.onMessageArrived = onMessage;
   
   MP.client.connect({
@@ -766,7 +784,12 @@ function initMP(roomCode) {
       MP.client.subscribe("geargrinder/lob/" + MP.room);
       enterLobby();
     },
-    useSSL: true
+    onFailure: (e) => {
+      alert("Cannot connect to Multiplayer Server (Firewall?). Error: " + e.errorMessage);
+      $('start-btn').textContent = "ENTER LOBBY";
+      $('start-btn').disabled = false;
+    },
+    useSSL: true // Required for GitHub Pages
   });
 }
 
@@ -824,13 +847,18 @@ function updateLobbyUI() {
   });
 }
 
+// Start Race Trigger
 $('lobby-start-btn').onclick = () => {
+  initA(); // Ensure audio context is ready
   const startTimestamp = Date.now() + 3000;
+  // Send network signal
   sendMsg('start_race', { startAt: startTimestamp });
+  // Start locally immediately (fail-safe if network drops)
   beginCountdown(3000);
 };
 
 function beginCountdown(ms) {
+  if(MP.state === "COUNTDOWN" || MP.state === "RACING") return; // Prevent double trigger
   MP.state = "COUNTDOWN";
   $('lobby-screen').classList.remove('show');
   const overlay = $('countdown-overlay');
@@ -901,16 +929,20 @@ function mpLoop(dt) {
     const relZ = -(opp.targetDist - S.distance);
     if (relZ > -200 && relZ < 50) {
        opp.mesh.visible = true;
-       const oppWorldZ = S._worldZ - (opp.targetDist - S.distance); // Approximation
+       // Approximate World Z for curve calculation based on visual offset
+       const oppWorldZ = S._worldZ - (opp.targetDist - S.distance); 
        
+       // Lateral Position with Interpolation
        const curveX = getCurveX(oppWorldZ);
        opp.mesh.position.x = opp.mesh.position.x + ((curveX + opp.laneX) - opp.mesh.position.x) * dt * 5;
        
+       // Longitudinal Position
        const visualZ = -(opp.targetDist - S.distance);
        opp.mesh.position.z += (visualZ - opp.mesh.position.z) * dt * 5;
        
        opp.mesh.position.y = 0;
        
+       // Rotation
        const cd = getCurveDeriv(oppWorldZ);
        opp.mesh.rotation.z = -cd * 0.08;
        opp.mesh.rotation.x = -getHeightDeriv(oppWorldZ) * 1.5;
@@ -1001,6 +1033,10 @@ document.addEventListener('touchmove',e=>{if(S.started)e.preventDefault();const 
 
 $('start-btn').onclick=()=>{
   initA();
+  const btn = $('start-btn');
+  btn.textContent = "CONNECTING...";
+  btn.disabled = true;
+  
   const room = $('room-input').value;
   if(room.length > 0) initMP(room);
   else initMP("RACE1");
