@@ -193,13 +193,17 @@ export function updateLobbyUI(players, myId) {
   const entries = Object.entries(players);
   if (countEl) countEl.textContent = entries.length + '/10 RIDERS';
 
-  entries.forEach(([id, p]) => {
+  entries.forEach(([id, p], i) => {
     const isMe = id === myId;
     const div = document.createElement('div');
     div.className = 'lobby-player' + (isMe ? ' me' : '');
+    div.setAttribute('data-player-id', id);
     const colorHex = p.color ? '#' + p.color.toString(16).padStart(6, '0') : '#4dffb8';
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
     div.innerHTML = `
+      <span class="lobby-rank ${rankClass}">#${i + 1}</span>
       <span><span class="player-color" style="background:${colorHex}"></span><strong>${p.name}${isMe ? ' (YOU)' : ''}</strong></span>
+      <span class="voice-indicator" data-voice-id="${id}"><span class="voice-bar"></span><span class="voice-bar"></span><span class="voice-bar"></span></span>
       <span class="status">READY</span>`;
     list.appendChild(div);
   });
@@ -229,10 +233,13 @@ export function updateLeaderboard(players, myId, myDistance) {
   entries.slice(0, 10).forEach((e, i) => {
     const div = document.createElement('div');
     div.className = 'mp-lb-entry' + (e.me ? ' me' : '');
+    div.setAttribute('data-player-id', e.id);
     const colorHex = '#' + e.color.toString(16).padStart(6, '0');
     div.innerHTML = `
+      <span class="mp-lb-pos">P${i + 1}</span>
       <span class="mp-lb-dot" style="background:${colorHex}"></span>
       <span class="mp-lb-name">${e.name}</span>
+      <span class="voice-indicator mp-lb-voice" data-voice-id="${e.id}"><span class="voice-bar"></span><span class="voice-bar"></span><span class="voice-bar"></span></span>
       <span class="mp-lb-dist">${Math.floor(e.dist)}m</span>`;
     lb.appendChild(div);
   });

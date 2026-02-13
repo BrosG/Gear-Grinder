@@ -10,6 +10,7 @@ import {
 } from './constants.js';
 import { createPlayerBike } from './bike.js';
 import { $, toast, updateLobbyUI, updateRoomList, updateLeaderboard } from './ui.js';
+import { Voice, handleRtcSignal, connectToPeer, stopVoice } from './voice.js';
 
 const THREE = window.THREE;
 
@@ -40,7 +41,7 @@ export function initMP(roomCode, callbacks = {}) {
   MP.room = roomCode.toUpperCase();
   MP.onCountdown = callbacks.onCountdown || null;
   MP.onStartGame = callbacks.onStartGame || null;
-  MP.playerName = MP.id.replace('RIDER_', 'R');
+  MP.playerName = callbacks.playerName || MP.id.replace('RIDER_', 'R');
 
   try {
     MP.client = new Paho.MQTT.Client('broker.emqx.io', 8084, MP.id);
@@ -58,9 +59,10 @@ export function initMP(roomCode, callbacks = {}) {
   MP.client.connect({
     onSuccess: () => {
       console.log('Connected to Broker');
-      // Subscribe to room topic + global directory
+      // Subscribe to room topic + global directory + RTC signaling
       MP.client.subscribe('geargrinder/lob/' + MP.room);
       MP.client.subscribe('geargrinder/directory');
+      MP.client.subscribe('geargrinder/rtc/' + MP.room + '/' + MP.id);
       enterLobby();
     },
     onFailure: (e) => {
@@ -116,6 +118,12 @@ function onMessage(msg) {
     return;
   }
 
+  // RTC signaling messages (point-to-point)
+  if (msg.destinationName.startsWith('geargrinder/rtc/')) {
+    handleRtcSignal(data);
+    return;
+  }
+
   // Ignore self
   if (data.id === MP.id) return;
 
@@ -139,6 +147,9 @@ function onMessage(msg) {
       updateLobbyUI(MP.players, MP.id);
       sendMsg('presence');
       sendDirectory();
+
+      // Connect voice if enabled
+      if (Voice.enabled) connectToPeer(data.id);
     }
   } else if (data.type === 'start_race') {
     const delay = data.startAt - Date.now();
@@ -326,4 +337,5 @@ export function cleanupOpponents() {
       opp.mesh = null;
     }
   });
+  stopVoice();
 }

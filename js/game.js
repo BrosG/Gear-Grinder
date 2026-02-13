@@ -22,6 +22,7 @@ import {
   showGameOver, hideGameOver, shareScore, shareRoom,
 } from './ui.js';
 import { MP, mpLoop, initMP, triggerRaceStart, setRacing, cleanupOpponents } from './multiplayer.js';
+import { Voice, initVoice, stopVoice, toggleMute, connectToPeer, updateVoiceIndicators } from './voice.js';
 
 const THREE = window.THREE;
 
@@ -247,6 +248,7 @@ export function setupInput() {
     if (e.code === 'ArrowDown') { e.preventDefault(); shift(-1); }
     if (e.code === 'ArrowLeft') { e.preventDefault(); changeLane(-1); }
     if (e.code === 'ArrowRight') { e.preventDefault(); changeLane(1); }
+    if (e.code === 'KeyM') { handleMuteToggle(); }
   });
 
   document.addEventListener('keyup', e => { if (e.code === 'Space') _spaceDown = false; });
@@ -280,6 +282,27 @@ export function setupInput() {
 }
 
 // ============================================================
+// VOICE MUTE HELPER
+// ============================================================
+function handleMuteToggle() {
+  if (!Voice.enabled) return;
+  const muted = toggleMute();
+  const muteBtn = $('mute-btn');
+  const hudBtn = $('voice-mute-hud');
+  if (muted) {
+    muteBtn.textContent = 'UNMUTE';
+    muteBtn.classList.add('muted');
+    hudBtn.textContent = 'MIC OFF';
+    hudBtn.classList.add('muted');
+  } else {
+    muteBtn.textContent = 'MUTE';
+    muteBtn.classList.remove('muted');
+    hudBtn.textContent = 'MIC ON';
+    hudBtn.classList.remove('muted');
+  }
+}
+
+// ============================================================
 // UI BUTTON BINDINGS
 // ============================================================
 export function setupButtons() {
@@ -290,10 +313,16 @@ export function setupButtons() {
     btn.textContent = 'CONNECTING...';
     btn.disabled = true;
 
+    // Read & save player name
+    let playerName = ($('name-input').value || '').trim().toUpperCase().replace(/[^A-Z0-9_ ]/g, '').substring(0, 12);
+    if (!playerName) playerName = 'RIDER';
+    localStorage.setItem('geargrinder_name', playerName);
+
     const room = $('room-input').value.trim();
     initMP(room.length > 0 ? room : 'RACE1', {
       onCountdown: beginCountdown,
       onStartGame: startGame,
+      playerName,
     });
   };
 
@@ -315,6 +344,49 @@ export function setupButtons() {
   // Share room from game over
   const goShareBtn = $('go-share-room-btn');
   if (goShareBtn) goShareBtn.onclick = () => shareRoom(MP.room);
+
+  // Voice toggle (lobby)
+  $('voice-toggle-btn').onclick = async () => {
+    const btn = $('voice-toggle-btn');
+    if (!Voice.enabled) {
+      btn.textContent = 'CONNECTING...';
+      const ok = await initVoice(MP.room, MP.id, MP.client);
+      if (ok) {
+        btn.textContent = 'VOICE ON';
+        btn.classList.remove('voice-off');
+        btn.classList.add('voice-on');
+        $('mute-btn').style.display = '';
+        $('voice-hud').style.display = '';
+
+        // Set up speaking change callback
+        Voice.onSpeakingChange = () => updateVoiceIndicators();
+
+        // Connect to existing peers
+        Object.keys(MP.players).forEach(id => {
+          if (id !== MP.id) connectToPeer(id);
+        });
+        toast('VOICE CHAT ON');
+      } else {
+        btn.textContent = 'MIC DENIED';
+        setTimeout(() => { btn.textContent = 'VOICE OFF'; }, 2000);
+      }
+    } else {
+      stopVoice();
+      btn.textContent = 'VOICE OFF';
+      btn.classList.remove('voice-on');
+      btn.classList.add('voice-off');
+      $('mute-btn').style.display = 'none';
+      $('voice-hud').style.display = 'none';
+      updateVoiceIndicators();
+      toast('VOICE CHAT OFF');
+    }
+  };
+
+  // Mute button (lobby)
+  $('mute-btn').onclick = () => handleMuteToggle();
+
+  // Mute button (HUD)
+  $('voice-mute-hud').onclick = () => handleMuteToggle();
 }
 
 // ============================================================
@@ -330,6 +402,9 @@ function update(dt) {
 
   // Multiplayer sync
   mpLoop(dt);
+
+  // Voice indicator updates
+  if (Voice.enabled && S.frame % 10 === 0) updateVoiceIndicators();
 
   S.frame++;
   const targetX = LANES[S.lane];

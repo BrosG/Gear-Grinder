@@ -16,9 +16,16 @@ function checkRoomParam() {
   }
 }
 
+// --- Restore saved player name ---
+function restoreName() {
+  const saved = localStorage.getItem('geargrinder_name');
+  if (saved) $('name-input').value = saved;
+}
+
 // --- Initialize ---
 function init() {
   checkRoomParam();
+  restoreName();
   setupInput();
   setupButtons();
 

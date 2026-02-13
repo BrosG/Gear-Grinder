@@ -49,6 +49,12 @@
       </div>
     </div>
 
+    <!-- Player Name -->
+    <div class="name-section">
+      <label class="name-label">YOUR NAME</label>
+      <input type="text" id="name-input" class="name-input" placeholder="RIDER" maxlength="12">
+    </div>
+
     <div class="or-divider">OR CREATE / JOIN</div>
 
     <!-- Room Input -->
@@ -63,6 +69,7 @@
       <span class="key">&larr; &rarr; / SWIPE</span><span>Dodge obstacles &amp; grab powerups</span>
       <div class="sep"></div>
       <span class="key">&#9889;&#128293;&#10024;&#129718;</span><span>Energy &middot; Speed &middot; Score &middot; Gravity</span>
+      <span class="key">M</span><span>Toggle voice mute (in lobby/race)</span>
       <div class="start-tip">UP TO 10 PLAYERS PER ROOM</div>
     </div>
 
@@ -83,6 +90,10 @@
   <div class="lobby-actions">
     <button id="lobby-start-btn">START RACE</button>
     <button id="lobby-share-btn">INVITE</button>
+  </div>
+  <div class="voice-controls" id="voice-controls">
+    <button id="voice-toggle-btn" class="voice-btn voice-off">VOICE OFF</button>
+    <button id="mute-btn" class="voice-btn mute-btn" style="display:none">MUTE</button>
   </div>
   <div class="lobby-wait-msg">ANYONE CAN START THE RACE</div>
 </div>
@@ -179,6 +190,9 @@
               stroke-dasharray="276.5" stroke-dashoffset="276.5" transform="rotate(-90 50 50)"/>
     </svg>
     <div class="pedal-btn-inner" id="pedal-btn">PEDAL</div>
+  </div>
+  <div id="voice-hud" class="voice-hud" style="display:none">
+    <button id="voice-mute-hud" class="voice-mute-hud">MIC ON</button>
   </div>
   <div id="float-text"></div>
   <div id="cliff-warn">&#9888; CLIFF AHEAD &#9888;</div>
