@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>GEAR GRINDER — ULTIMATE EDITION</title>
+<title>GEAR GRINDER — MMO EDITION</title>
+<!-- MQTT Library for Multiplayer -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
@@ -118,15 +120,15 @@ canvas{display:block;outline:none}
 <body>
 <div id="vignette"></div><div id="terrain-tint"></div><div id="speed-lines"></div><div id="flash-overlay"></div><div id="shift-flash"></div><div id="shift-hint"></div>
 <div id="start-screen"><div class="bg-grid"></div><div class="bg-glow"></div><div id="start-content">
-<h1>GEAR GRINDER</h1><div class="start-edition">ULTIMATE EDITION</div>
+<h1>GEAR GRINDER</h1><div class="start-edition">MMO EDITION</div>
 <div class="start-controls">
 <span class="key">SPACE / TAP</span><span>Pedal — rhythm is everything</span>
 <span class="key">↑ ↓ / SCROLL</span><span>Shift through 12 gears</span>
 <span class="key">← → / SWIPE</span><span>Dodge obstacles & grab powerups</span>
 <div class="sep"></div>
 <span class="key">⚡🔥✨🪶</span><span>Energy · Speed · Score · Gravity</span>
-<div class="start-tip">STAY IN THE GREEN RPM ZONE → LESS ENERGY COST + MORE SPEED</div>
-</div><button id="start-btn">RIDE</button></div></div>
+<div class="start-tip">CONNECTING TO GLOBAL LOBBY... RACE AGAINST THE WORLD!</div>
+</div><button id="start-btn">RIDE ONLINE</button></div></div>
 <div id="go-screen"><div class="go-new" id="go-new" style="display:none">★ NEW RECORD ★</div>
 <h2>WIPEOUT</h2><div class="go-grade-wrap"><div class="go-grade-label">PERFORMANCE</div><div class="go-grade-val" id="go-grade">A</div></div>
 <div class="go-grid">
@@ -807,10 +809,149 @@ $('pedal-btn').addEventListener('pointerdown',e=>{e.preventDefault();pedal()});
 let lastScroll=0;window.addEventListener('wheel',e=>{const n=performance.now();if(n-lastScroll<130)return;lastScroll=n;shift(e.deltaY<0?1:-1)},{passive:true});
 let tsx=0,tsy=0;document.addEventListener('touchstart',e=>{tsx=e.touches[0].clientX;tsy=e.touches[0].clientY},{passive:true});
 document.addEventListener('touchmove',e=>{if(S.started)e.preventDefault();const dx=e.touches[0].clientX-tsx,dy=e.touches[0].clientY-tsy;if(Math.abs(dx)>Math.abs(dy)){if(Math.abs(dx)>28){changeLane(dx>0?1:-1);tsx=e.touches[0].clientX}}else{if(Math.abs(dy)>28){shift(dy<0?1:-1);tsy=e.touches[0].clientY}}},{passive:false});
-$('start-btn').onclick=()=>{initA();$('start-screen').style.display='none';$('hud').style.display='block';S.started=true;reset()};
+$('start-btn').onclick=()=>{
+  initA();
+  $('start-screen').style.display='none';
+  $('hud').style.display='block';
+  S.started=true;
+  reset();
+  // Hook for multiplayer
+  if(initMP) initMP(); 
+};
 $('retry-btn').onclick=()=>{reset();S.started=true};
 $('share-btn').onclick=()=>{const t='🚴 GEAR GRINDER ULTIMATE\n'+$('go-grade').textContent+' Grade | '+Math.floor(S.score).toLocaleString()+' pts\n'+Math.floor(S.distance)+'m | '+Math.floor(S.maxSpeed)+' km/h';if(navigator.share)navigator.share({title:'GEAR GRINDER',text:t}).catch(()=>{});else navigator.clipboard.writeText(t).then(()=>toast('COPIED!'))};
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+// ═══════════════════════════════════════════════════════════════
+// SERVERLESS REAL-TIME MULTIPLAYER (MQTT) - GURU HACK
+// ═══════════════════════════════════════════════════════════════
+const MP = {
+    client: null,
+    topic: "geargrinder/ult/global", // Public channel
+    id: "RIDER_" + Math.floor(Math.random() * 99999), 
+    others: {}, 
+    lastSent: 0
+};
+
+// Hologram material for ghosts
+const matHolo = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true, transparent:true, opacity:0.3 });
+
+function initMP() {
+    // Connect to free broker
+    MP.client = new Paho.MQTT.Client("broker.emqx.io", 8083, MP.id);
+    MP.client.onConnectionLost = (o) => console.log("MP Lost", o);
+    MP.client.onMessageArrived = (msg) => {
+        try {
+            const data = JSON.parse(msg.payloadString);
+            if (data.id !== MP.id) updateOpponent(data);
+        } catch(e) {}
+    };
+    MP.client.connect({
+        onSuccess: () => {
+            console.log("MP CONNECTED");
+            toast("ONLINE: JOINED GLOBAL LOBBY");
+            MP.client.subscribe(MP.topic);
+        },
+        useSSL: true
+    });
+}
+
+function updateOpponent(data) {
+    if (!MP.others[data.id]) {
+        // Create ghost mesh by cloning bike group structure but simplifying materials
+        const g = bikeGrp.clone();
+        g.traverse(o => {
+            if (o.isMesh) {
+                o.material = matHolo; 
+                o.castShadow = false; 
+                o.receiveShadow = false;
+            }
+            // Remove lights/cameras from ghost to save perf
+            if (o.isLight || o.isCamera) o.visible = false;
+        });
+        scene.add(g);
+        MP.others[data.id] = { mesh: g, targetZ: 0, laneX: 0, lastUpd: Date.now() };
+        toast("RIVAL JOINED!");
+    }
+    const opp = MP.others[data.id];
+    opp.targetZ = data.d; // Their total distance
+    opp.laneX = data.x;
+    opp.lastUpd = Date.now();
+}
+
+function mpLoop(dt) {
+    // 1. Broadcast
+    if (MP.client && MP.client.isConnected() && S.alive && S.started) {
+        const now = Date.now();
+        if (now - MP.lastSent > 150) { // 6-7 updates per sec
+            MP.lastSent = now;
+            const payload = JSON.stringify({ id: MP.id, d: Math.floor(S.distance), x: S.laneX });
+            const m = new Paho.MQTT.Message(payload);
+            m.destinationName = MP.topic;
+            MP.client.send(m);
+        }
+    }
+
+    // 2. Render Opponents
+    const now = Date.now();
+    Object.keys(MP.others).forEach(k => {
+        const opp = MP.others[k];
+        // Prune old
+        if (now - opp.lastUpd > 5000) {
+            scene.remove(opp.mesh);
+            delete MP.others[k];
+            return;
+        }
+
+        // Relative Z calculation:
+        // If they are at 100m and I am at 90m, they are +10m ahead relative to camera default position.
+        // In this game engine, the world moves, camera stays mostly put.
+        // We use relative distance to place them on the screen.
+        
+        const relDist = opp.targetZ - S.distance; // Positive = ahead
+        
+        // Only draw if within visible range (-50m behind to +300m ahead)
+        if(relDist > -50 && relDist < 300) {
+            opp.mesh.visible = true;
+            
+            // Interpolate Lateral Position
+            opp.mesh.position.x = opp.mesh.position.x + (opp.laneX - opp.mesh.position.x) * dt * 5;
+            
+            // Calculate Curve offset based on their world position
+            // S._worldZ is my current world Z. Their world Z is S._worldZ - relDist
+            // (Because moving forward decreases WorldZ in this engine)
+            const oppWorldZ = S._worldZ - relDist;
+            const curveX = getCurveX(oppWorldZ);
+            
+            opp.mesh.position.x = curveX + opp.laneX; // Apply curve + lane
+            
+            // Apply Z relative to camera anchor
+            // Camera/Bike anchor is roughly at Z=0 (plus camera offset logic)
+            // We just place them at -relDist (because ThreeJS Z-forward is negative)
+            // Wait, in this engine: bike is at Z=0. Road moves +Z towards us. 
+            // Actually objects spawn at -DrawDist and move +Z.
+            // If opp is +10m ahead, they should be at Z = -10.
+            
+            const targetVisZ = -relDist;
+            opp.mesh.position.z = opp.mesh.position.z + (targetVisZ - opp.mesh.position.z) * dt * 5;
+
+            // Height & Rotation
+            opp.mesh.position.y = 0; // Stick to road plane (Visuals handle height)
+            
+            // Fake the lean/pitch
+            const cd = getCurveDeriv(oppWorldZ);
+            opp.mesh.rotation.z = -cd * 0.08;
+            opp.mesh.rotation.x = -getHeightDeriv(oppWorldZ) * 1.5;
+            
+            // Wheels spin
+            opp.mesh.children[0].children[0].rotation.x += dt * 10; // Front wheel
+            opp.mesh.children[0].children[1].rotation.x += dt * 10; // Rear wheel
+            
+        } else {
+            opp.mesh.visible = false;
+        }
+    });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // MAIN LOOP
@@ -820,6 +961,10 @@ const _tc=new THREE.Color();
 
 function update(dt){
   if(!S.alive||!S.started)return;
+  
+  // RUN MULTIPLAYER LOOP
+  mpLoop(dt);
+
   S.frame++;
   const targetX=LANES[S.lane];S.laneX+=(targetX-S.laneX)*dt*8;
   const gd=GEARS[S.gear];
